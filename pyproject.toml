@@ -1,8 +1,10 @@
 [tool.poetry]
 name = "ready-set-deploy"
 version = "0.1.0"
-description = ""
+description = "Deployment/Provisioning done right"
+license = "MIT"
 authors = ["Steven Karas <steven.karas@gmail.com>"]
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -17,3 +19,13 @@ mypy = "^0.931"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+
+[tool.flake8]
+max-line-length = 160
+max-complexity = 20
+
+[tool.mypy]
+ignore_missing_imports = true
