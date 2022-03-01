@@ -6,9 +6,13 @@ authors = ["Steven Karas <steven.karas@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
+click = "^8.0.4"
+tomli = "^2.0.1"
+more-itertools = "^8.12.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
+mypy = "^0.931"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

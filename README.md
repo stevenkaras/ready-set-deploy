@@ -22,10 +22,23 @@ rsd execute HOST --role role.py
 RSD uses a three phase process: fact gathering, diff, and execution.
 Plugins provide functionality for all three phases, although each come with defaults.
 
-The main design goal is minimal effort.
+The main design goal is minimal computational effort.
 
 Feature goals (some out of scope for the core project):
 
 * Centralized execution against remote hosts
 * Agent execution with arbitrary triggering (cron, pubsub, etc)
 * Modular plugin system
+
+# v1.0.0 Progress
+
+- [ ] CLI Interface
+- [ ] Modular providers
+
+Example providers:
+
+- [ ] Homebrew
+- [ ] APT
+- [ ] ASDF
+- [ ] IPTables
+- [ ] File content
