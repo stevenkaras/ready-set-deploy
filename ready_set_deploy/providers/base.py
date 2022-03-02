@@ -24,7 +24,7 @@ class CommandRunner:
 
     def lines(self, command: list[str], params: Iterable[str] = []) -> Iterable[str]:
         for chunk_command in self.to_commands(command, params):
-            for line in self.run(command).split("\n"):
+            for line in self.run(chunk_command).split("\n"):
                 if not line:
                     continue
                 yield line
