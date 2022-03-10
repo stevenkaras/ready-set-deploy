@@ -5,16 +5,14 @@ RSD is a deployment framework designed to use set theory to issue the least numb
 # Usage
 
 ```bash
-rsd role.py > role_state.json
-rsd role.bash > role_state.json  # rsd runs any executable file with some small hooks to validate output
-rsd gather HOST > host_state.json
+rsd validate state.json
+rsd gather PROVIDER.ID > provider_state.json
+rsd gather ALL > host_state.json
 rsd diff --from host_state.json --to role_state.json > plan.json
-rsd apply HOST --plan plan.json
+rsd commands plan.json
 
 # Altogehter now
-rsd apply HOST --plan <(rsd diff --from <(rsd gather HOST) --to <(rsd role.py) )
-# or as a convenience (invokes the above somewhat more intelligently for multiple hosts)
-rsd execute HOST --role role.py
+bash -x <(rsd commands <(rsd diff --from <(rsd gather PROVIDER.ID) --to role_state.json ) )
 ```
 
 # Design
@@ -26,14 +24,17 @@ The main design goal is minimal computational effort.
 
 Feature goals (some out of scope for the core project):
 
-* Centralized execution against remote hosts
-* Agent execution with arbitrary triggering (cron, pubsub, etc)
 * Modular plugin system
 
 # v1.0.0 Progress
 
 - [ ] CLI Interface
-- [ ] Modular providers
+    - [x] gather
+    - [x] gather ALL
+    - [x] diff
+    - [ ] commands
+    - [ ] validate
+- [x] Modular providers
 
 Example providers:
 
@@ -42,3 +43,6 @@ Example providers:
 - [ ] ASDF
 - [ ] IPTables
 - [ ] File content
+- [ ] Docker
+- [ ] Pip
+- [ ] Pipx
