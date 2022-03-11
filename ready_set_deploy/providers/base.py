@@ -51,5 +51,5 @@ class Provider:
     def apply_partial_to_full(self, left: SubsystemState, partial: SubsystemState) -> SubsystemState:
         raise NotImplementedError("apply_partial_to_full")
 
-    def to_commands(self, state: SubsystemState) -> Iterable[Sequence[str]]:
+    def to_commands(self, desired: Optional[SubsystemState], undesired: Optional[SubsystemState]) -> Iterable[Sequence[str]]:
         raise NotImplementedError("to_commands")

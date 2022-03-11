@@ -49,8 +49,28 @@ class GenericProviderMixin(Generic[_InternalElements]):
             elements=self.convert_elements_back(to_remove),
         )
 
+    def add_elements(self, left: _InternalElements, partial: _InternalElements) -> _InternalElements:
+        raise NotImplementedError("add_elements")
+
+    def remove_elements(self, left: _InternalElements, partial: _InternalElements) -> _InternalElements:
+        raise NotImplementedError("remove_elements")
+
     def apply_partial_to_full(self, left: SubsystemState, partial: SubsystemState) -> SubsystemState:
-        raise NotImplementedError("apply_partial_to_full")
+        assert left.is_desired
+        assert partial.is_partial
+
+        left_packages = self.convert_elements(left.elements)
+        partial_packages = self.convert_elements(partial.elements)
+
+        if partial.is_desired:
+            combined = self.add_elements(left_packages, partial_packages)
+        else:
+            combined = self.remove_elements(left_packages, partial_packages)
+
+        return SubsystemState(
+            name=self.STATE_TYPE,
+            elements=self.convert_elements_back(combined),
+        )
 
     def to_commands(self, state: SubsystemState) -> Iterable[Sequence[str]]:
         raise NotImplementedError("to_commands")

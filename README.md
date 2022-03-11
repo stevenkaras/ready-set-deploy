@@ -32,13 +32,15 @@ Feature goals (some out of scope for the core project):
     - [x] gather
     - [x] gather ALL
     - [x] diff
-    - [ ] commands
+    - [x] commands
+    - [ ] combine
     - [ ] validate
 - [x] Modular providers
+- [ ] External providers
 
 Example providers:
 
-- [ ] Homebrew
+- [x] Homebrew
 - [ ] APT
 - [ ] ASDF
 - [ ] IPTables

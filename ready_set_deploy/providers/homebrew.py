@@ -14,7 +14,7 @@ from ready_set_deploy.providers.generic import GenericProviderMixin
 _Elements = tuple[set, set, set]
 
 
-class HomebrewPackagesProvider(Provider, GenericProviderMixin[_Elements]):
+class HomebrewProvider(GenericProviderMixin[_Elements], Provider):
     STATE_TYPE = "packages.homebrew"
 
     @property
@@ -74,7 +74,7 @@ class HomebrewPackagesProvider(Provider, GenericProviderMixin[_Elements]):
             [{"name": cask} for cask in casks],
         ]
 
-    def diff_packages_leftside(self, left: _Elements, right: _Elements) -> _Elements:
+    def diff_left_only(self, left: _Elements, right: _Elements) -> _Elements:
         left_taps, left_formulas, left_casks = left
         right_taps, right_formulas, right_casks = right
 
@@ -104,37 +104,15 @@ class HomebrewPackagesProvider(Provider, GenericProviderMixin[_Elements]):
 
         return taps, formulas, casks
 
-    def apply_partial_to_full(self, left: SubsystemState, partial: SubsystemState) -> SubsystemState:
-        assert left.is_desired
-        assert partial.is_partial
-
-        left_packages = self.convert_elements(left.elements)
-        partial_packages = self.convert_elements(partial.elements)
-
-        if partial.is_desired:
-            combined = self.add_elements(left_packages, partial_packages)
-        else:
-            combined = self.remove_elements(left_packages, partial_packages)
-
-        return SubsystemState(
-            name=self.STATE_TYPE,
-            elements=self.convert_elements_back(combined),
-        )
-
-    def to_commands(self, state: SubsystemState) -> Iterable[Sequence[str]]:
-        taps, formulas, casks = self.convert_elements(state.elements)
-        yield from Runner.to_commands("brew tap".split(), taps)
-        yield from Runner.to_commands("brew install".split(), formulas)
-        yield from Runner.to_commands("brew install --cask".split(), casks)
-
-
-def main():
-    import logging
-
-    logging.basicConfig(level=logging.DEBUG)
-    provider = HomebrewPackagesProvider()
-    print(provider.gather_local())
-
-
-if __name__ == "__main__":
-    main()
+    def to_commands(self, desired: Optional[SubsystemState], undesired: Optional[SubsystemState]) -> Iterable[Sequence[str]]:
+        desired_elements = [[], [], []] if desired is None else desired.elements
+        desired_taps, desired_formulas, desired_casks = self.convert_elements(desired_elements)
+        yield from Runner.to_commands("brew tap".split(), desired_taps)
+        yield from Runner.to_commands("brew install".split(), desired_formulas)
+        yield from Runner.to_commands("brew install --cask".split(), desired_casks)
+        
+        undesired_elements = [[], [], []] if undesired is None else undesired.elements
+        undesired_taps, undesired_formulas, undesired_casks = self.convert_elements(undesired_elements)
+        yield from Runner.to_commands("brew untap".split(), undesired_taps)
+        yield from Runner.to_commands("brew uninstall".split(), undesired_formulas)
+        yield from Runner.to_commands("brew uninstall --cask".split(), undesired_casks)

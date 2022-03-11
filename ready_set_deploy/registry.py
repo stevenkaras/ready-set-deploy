@@ -1,7 +1,7 @@
 import logging
 import importlib
 from typing import Any, Optional, TypeVar, Generic, Union
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 
 from ready_set_deploy.model import SubsystemState
 from ready_set_deploy.providers.base import Provider
@@ -78,3 +78,6 @@ class ProviderRegistry(_Registry[Provider]):
 
     def apply_partial_to_full(self, name: str, left: SubsystemState, partial: SubsystemState) -> SubsystemState:
         return self.get(name).apply_partial_to_full(left, partial)
+
+    def to_commands(self, name: str, desired: Optional[SubsystemState], undesired: Optional[SubsystemState]) -> Iterable[Sequence[str]]:
+        return self.get(name).to_commands(desired, undesired)
