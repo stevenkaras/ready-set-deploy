@@ -23,6 +23,7 @@ class SubsystemState:
 
     @classmethod
     def from_dict(cls, source: dict):
+        source["state_type"] = SubsystemStateType(source["state_type"])
         return cls(**source)
 
     def __str__(self):
@@ -61,4 +62,6 @@ class DataclassEncoder(json.JSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):
             return _dataclass_to_shallow_dict(o)
+        if isinstance(o, enum.Enum):
+            return o.value
         return super().default(o)

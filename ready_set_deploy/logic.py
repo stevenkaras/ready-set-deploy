@@ -109,7 +109,7 @@ def main():
     actual = SystemState.from_dict(
         json.loads(
             r"""
-    {"subsystems": {"packages.homebrew": [{"name": "packages.homebrew", "qualifier": null, "is_partial": false, "is_desired": true, "elements": [
+    {"subsystems": {"packages.homebrew": [{"name": "packages.homebrew", "qualifier": null, "state_type": "full", "elements": [
         ["tap-actual-only", "tap-shared"],
         [{"name": "cask-actual-only"}, {"name": "cask-shared"}],
         [{"name": "formula-actual-only"}, {"name": "formula-shared"}]]}]}}
@@ -119,7 +119,7 @@ def main():
     desired = SystemState.from_dict(
         json.loads(
             r"""
-    {"subsystems": {"packages.homebrew": [{"name": "packages.homebrew", "qualifier": null, "is_partial": false, "is_desired": true, "elements": [
+    {"subsystems": {"packages.homebrew": [{"name": "packages.homebrew", "qualifier": null, "state_type": "full", "elements": [
         ["tap-shared", "tap-desired-only"],
         [{"name": "cask-shared"}, {"name": "cask-desired-only"}],
         [{"name": "formula-shared"}, {"name": "formula-desired-only"}]]}]}}
@@ -132,9 +132,9 @@ def main():
     partial = SystemState.from_dict(
         json.loads(
             r"""
-    {"subsystems": {"packages.homebrew": [{"name": "packages.homebrew", "qualifier": null, "is_partial": true, "is_desired": true, "elements":
+    {"subsystems": {"packages.homebrew": [{"name": "packages.homebrew", "qualifier": null, "state_type": "desired", "elements":
         [["tap-desired-only"], [{"name": "cask-desired-only"}],[{"name": "formula-desired-only"}]]},
-    {"name": "packages.homebrew", "qualifier": null, "is_partial": true, "is_desired": false, "elements":
+    {"name": "packages.homebrew", "qualifier": null, "state_type": "undesired", "elements":
         [["tap-actual-only"], [{"name": "cask-actual-only"}], [{"name": "formula-actual-only"}]]}]}}"""
         )
     )
