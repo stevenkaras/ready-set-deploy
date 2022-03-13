@@ -4,7 +4,7 @@ Holistic homebrew RSD provider
 This provider hadnle
 """
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from typing import Generic, TypeVar
 
 from ready_set_deploy.model import SubsystemState
@@ -38,16 +38,19 @@ class GenericProviderMixin(Generic[_InternalElements]):
         to_add = self.diff_left_only(desired_packages, actual_packages)
         to_remove = self.diff_left_only(actual_packages, desired_packages)
 
-        return SubsystemState(
+        desired_state = SubsystemState(
             name=self.STATE_TYPE,
             is_partial=True,
             elements=self.convert_elements_back(to_add),
-        ), SubsystemState(
+        )
+        undesired_state = SubsystemState(
             name=self.STATE_TYPE,
             is_desired=False,
             is_partial=True,
             elements=self.convert_elements_back(to_remove),
         )
+
+        return desired_state, undesired_state
 
     def add_elements(self, left: _InternalElements, partial: _InternalElements) -> _InternalElements:
         raise NotImplementedError("add_elements")
@@ -72,5 +75,13 @@ class GenericProviderMixin(Generic[_InternalElements]):
             elements=self.convert_elements_back(combined),
         )
 
-    def to_commands(self, state: SubsystemState) -> Iterable[Sequence[str]]:
-        raise NotImplementedError("to_commands")
+    def combine(self, states: Iterable[SubsystemState]) -> Iterable[SubsystemState]:
+        desired_elements = None
+        undesired_elements = None
+        for state in states:
+            elements = self.convert_elements(state.elements)
+            if state.is_desired:
+                if desired_elements is None:
+                    desired_elements = elements
+
+        return []

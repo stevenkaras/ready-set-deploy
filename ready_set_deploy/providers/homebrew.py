@@ -8,7 +8,8 @@ from collections.abc import Iterable, Sequence
 from typing import Optional
 
 from ready_set_deploy.model import SubsystemState
-from ready_set_deploy.providers.base import Provider, Runner
+from ready_set_deploy.runner import Runner
+from ready_set_deploy.providers.base import Provider
 from ready_set_deploy.providers.generic import GenericProviderMixin
 
 _Elements = tuple[set, set, set]
@@ -110,7 +111,7 @@ class HomebrewProvider(GenericProviderMixin[_Elements], Provider):
         yield from Runner.to_commands("brew tap".split(), desired_taps)
         yield from Runner.to_commands("brew install".split(), desired_formulas)
         yield from Runner.to_commands("brew install --cask".split(), desired_casks)
-        
+
         undesired_elements = [[], [], []] if undesired is None else undesired.elements
         undesired_taps, undesired_formulas, undesired_casks = self.convert_elements(undesired_elements)
         yield from Runner.to_commands("brew untap".split(), undesired_taps)

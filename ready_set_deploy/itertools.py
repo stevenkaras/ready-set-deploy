@@ -18,9 +18,7 @@ def dict_matching(*dicts: dict[_K, _V], default: Optional[_V] = None) -> Iterabl
             yield key, [od.get(key, default) for od in dicts]
 
 
-def iter_matching(
-    *iters: Iterable[_V], key: Callable[[_V], _K], default: Optional[_V] = None
-) -> Iterable[tuple[_K, list[Optional[_V]]]]:
+def iter_matching(*iters: Iterable[_V], key: Callable[[_V], _K], default: Optional[_V] = None) -> Iterable[tuple[_K, list[Optional[_V]]]]:
     by_key = defaultdict(lambda: [default] * len(iters))
     for i, items in enumerate(iters):
         for item in items:

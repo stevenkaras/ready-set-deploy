@@ -19,9 +19,7 @@ class _Registry(Generic[_V]):
 
     @classmethod
     def from_dict(cls, config: dict[str, Any]):
-        def _flatten_dict(
-            d: dict[str, Any], current_path: list[str] = [], delimiter: str = "."
-        ) -> Iterable[tuple[str, str]]:
+        def _flatten_dict(d: dict[str, Any], current_path: list[str] = [], delimiter: str = ".") -> Iterable[tuple[str, str]]:
             for key, val in d.items():
                 current_path.append(key)
                 if isinstance(val, dict):
@@ -79,5 +77,11 @@ class ProviderRegistry(_Registry[Provider]):
     def apply_partial_to_full(self, name: str, left: SubsystemState, partial: SubsystemState) -> SubsystemState:
         return self.get(name).apply_partial_to_full(left, partial)
 
+    def combine(self, name: str, states: Iterable[SubsystemState]) -> Iterable[SubsystemState]:
+        return self.get(name).combine(states)
+
     def to_commands(self, name: str, desired: Optional[SubsystemState], undesired: Optional[SubsystemState]) -> Iterable[Sequence[str]]:
         return self.get(name).to_commands(desired, undesired)
+
+    def is_valid(self, name: str, state: SubsystemState) -> Iterable[str]:
+        return self.get(name).is_valid(state)

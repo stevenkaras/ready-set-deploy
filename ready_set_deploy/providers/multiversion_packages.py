@@ -39,11 +39,7 @@ class MultiversionPackageManagerMixin:
         to_add = self._diff_multiversion(right_packages, left_packages)
         to_remove = self._diff_multiversion(left_packages, right_packages)
 
-        return SubsystemState(
-            name=self.STATE_TYPE,
-            is_partial=True,
-            elements=self._multiversions_to_elements(to_add),
-        ), SubsystemState(
+        return SubsystemState(name=self.STATE_TYPE, is_partial=True, elements=self._multiversions_to_elements(to_add),), SubsystemState(
             name=self.STATE_TYPE,
             is_desired=False,
             is_partial=True,

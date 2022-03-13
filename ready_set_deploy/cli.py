@@ -1,15 +1,14 @@
-from io import StringIO
-from typing import TextIO, cast
+from typing import TextIO
 import json
 import shlex
+from collections.abc import Iterable
 
 import click
 import tomli
 
-from ready_set_deploy.model import DataclassEncoder, SubsystemState
-from ready_set_deploy.model import SystemState
+from ready_set_deploy.model import DataclassEncoder, SystemState
 from ready_set_deploy.registry import ProviderRegistry
-from ready_set_deploy.itertools import dict_matching, iter_matching
+from ready_set_deploy.logic import diff_state, combine_states, is_valid, partial_to_commands
 
 
 def load_registry_from_config(configpath="config.toml") -> ProviderRegistry:
@@ -39,12 +38,13 @@ def gather(registry: ProviderRegistry, provider: str):
 
     substates = [registry.gather_local(provider) for provider in providers]
     state = SystemState.from_substates(substates)
+
     print(json.dumps(state, cls=DataclassEncoder))
 
 
 @main.command()
-@click.option("--actual-file", type=click.File("r"))
-@click.option("--desired-file", type=click.File("r"))
+@click.argument("actual_file", metavar="ACTUAL", type=click.File("r"))
+@click.argument("desired_file", metavar="DESIRED", type=click.File("r"))
 @click.pass_obj
 def diff(registry: ProviderRegistry, actual_file: TextIO, desired_file: TextIO):
     """
@@ -55,95 +55,58 @@ def diff(registry: ProviderRegistry, actual_file: TextIO, desired_file: TextIO):
     desired_dict = json.load(desired_file)
     desired = SystemState.from_dict(desired_dict)
 
-    all_partials = []
-    for name, (actual_states, desired_states) in dict_matching(actual.subsystems, desired.subsystems, default=[]):
-        actual_states = cast(list[SubsystemState], actual_states)
-        desired_states = cast(list[SubsystemState], desired_states)
-        for qualifier, (actual_state, desired_state) in iter_matching(
-            actual_states, desired_states, key=lambda substate: substate.qualifier
-        ):
-            if actual_state is not None and desired_state is not None:
-                partials = registry.diff(name, actual_state, desired_state)
-            elif actual_state is not None and desired_state is None:
-                partials = [
-                    SubsystemState(
-                        name=name,
-                        qualifier=qualifier,
-                        is_partial=True,
-                        is_desired=False,
-                        after_anchor=actual_state.after_anchor,
-                        before_anchor=actual_state.before_anchor,
-                        elements=actual_state.elements,
-                    )
-                ]
-            elif actual_state is None and desired_state is not None:
-                partials = [
-                    SubsystemState(
-                        name=name,
-                        qualifier=qualifier,
-                        is_partial=True,
-                        is_desired=True,
-                        after_anchor=desired_state.after_anchor,
-                        before_anchor=desired_state.before_anchor,
-                        elements=desired_state.elements,
-                    )
-                ]
-            else:
-                # can't happen, but for completeness's sake
-                partials = []
-            all_partials += partials
+    partial = diff_state(registry, actual, desired)
 
-    state = SystemState.from_substates(all_partials)
-    print(json.dumps(state, cls=DataclassEncoder))
+    print(json.dumps(partial, cls=DataclassEncoder))
+
+
+@main.command()
+@click.argument("state_files", metavar="STATES", nargs=-2, type=click.File("r"))
+def combine(registry: ProviderRegistry, state_files: Iterable[TextIO]):
+    """
+    Combine multiple state files
+    """
+    print(type(state_files))
+    states = [SystemState.from_dict(json.load(state_file)) for state_file in state_files]
+
+    combined_state = combine_states(registry, *states)
+
+    print(json.dumps(combined_state, cls=DataclassEncoder))
 
 
 @main.command()
 @click.argument("PARTIAL", type=click.File("r"))
 @click.pass_obj
 def commands(registry: ProviderRegistry, partial: TextIO):
+    """
+    Convert a PARTIAL state to commands to be run
+    """
     partial_dict = json.load(partial)
     partial_state = SystemState.from_dict(partial_dict)
 
-    for name, substates in partial_state.subsystems.items():
-        substate_by_qualifier = {}
-        for substate in substates:
-            l = substate_by_qualifier.setdefault(substate.qualifier, [None, None])
-            l[0 if substate.is_desired else 1] = substate
-
-        for _, (desired, undesired) in substate_by_qualifier.items():
-            for command in registry.to_commands(name, desired, undesired):
-                print(shlex.join(command))
+    for command in partial_to_commands(registry, partial_state):
+        print(shlex.join(command))
 
 
 @main.command()
-@click.pass_context
-def test(context: click.Context):
-    # context.invoke(gather, provider="packages.homebrew")
-
-    actual = r"""
-    {"subsystems": {"packages.homebrew": [{"name": "packages.homebrew", "qualifier": null, "is_partial": false, "is_desired": true, "after_anchor": null,
-    "before_anchor": null, "elements": [
-        ["tap-actual-only", "tap-shared"],
-        [{"name": "cask-actual-only"}, {"name": "cask-shared"}],
-        [{"name": "formula-actual-only"}, {"name": "formula-shared"}]]}]}}
+@click.argument("state_file", metavar="STATE", type=click.File("r"))
+@click.pass_obj
+def validate(registry: ProviderRegistry, state_file: TextIO):
     """
-    desired = r"""
-    {"subsystems": {"packages.homebrew": [{"name": "packages.homebrew", "qualifier": null, "is_partial": false, "is_desired": true, "after_anchor": null,
-    "before_anchor": null, "elements": [
-        ["tap-shared", "tap-desired-only"],
-        [{"name": "cask-shared"}, {"name": "cask-desired-only"}],
-        [{"name": "formula-shared"}, {"name": "formula-desired-only"}]]}]}}
+    Validate if a state is consistent and conforms to the ready-set-deploy schema requirements
     """
-    context.invoke(diff, actual_file=StringIO(actual), desired_file=StringIO(desired))
+    state_dict = json.load(state_file)
+    state = SystemState.from_dict(state_dict)
 
-    partial = r"""{"subsystems": {"packages.homebrew": [{"name": "packages.homebrew", "qualifier": null, "is_partial": true, "is_desired": true,
-    "after_anchor": null, "before_anchor": null, "elements": [["tap-desired-only"], [{"name": "cask-desired-only"}], [{"name": "formula-desired-only"}]]},
-    {"name": "packages.homebrew", "qualifier": null, "is_partial": true, "is_desired": false, "after_anchor": null, "before_anchor": null, "elements":
-    [["tap-actual-only"], [{"name": "cask-actual-only"}], [{"name": "formula-actual-only"}]]}]}}"""
-    context.invoke(commands, partial=StringIO(partial))
+    reasons = is_valid(registry, state)
+    if not reasons:
+        return 0
+
+    for reason in reasons:
+        print(reason)
+
+    return 1
 
 
 if __name__ == "__main__":
-    registry = load_registry_from_config()
-    test(obj=registry)
-    # main()
+    main()
