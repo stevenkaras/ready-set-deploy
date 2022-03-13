@@ -40,6 +40,7 @@ class SubsystemState:
 @dataclasses.dataclass
 class SystemState:
     subsystems: dict[str, list[SubsystemState]] = dataclasses.field(default_factory=dict)
+    version: str = "1"
 
     @classmethod
     def from_dict(cls, source):
