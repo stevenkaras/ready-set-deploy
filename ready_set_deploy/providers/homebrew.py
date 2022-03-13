@@ -26,8 +26,22 @@ class HomebrewProvider(GenericProviderMixin[_Elements], Provider):
         command = "brew info --json=v2 --installed".split()
         info = Runner.json(command)
 
-        casks = list(sorted([self._parse_cask(cask_info) for cask_info in info["casks"]], key=lambda c: c["name"]))
-        formulas = list(sorted([self._parse_formula(formula_info) for formula_info in info["formulas"]], key=lambda c: c["name"]))
+        casks = list(
+            sorted(
+                [self._parse_cask(cask_info) for cask_info in info["casks"]],
+                key=lambda c: c["name"],
+            )
+        )
+        formulas = list(
+            sorted(
+                [
+                    self._parse_formula(formula_info)
+                    for formula_info in info["formulae"]
+                    if any(install_info["installed_on_request"] for install_info in formula_info["installed"])
+                ],
+                key=lambda c: c["name"],
+            )
+        )
 
         return SubsystemState(
             name=self.PROVIDER_NAME,
