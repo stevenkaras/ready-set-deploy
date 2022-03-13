@@ -10,7 +10,7 @@ class Provider:
     def diff(self, left: SubsystemState, right: SubsystemState) -> tuple[SubsystemState, SubsystemState]:
         raise NotImplementedError("diff")
 
-    def apply_partial_to_full(self, left: SubsystemState, partial: SubsystemState) -> SubsystemState:
+    def apply_partial_to_full(self, full: SubsystemState, partial: SubsystemState) -> SubsystemState:
         raise NotImplementedError("apply_partial_to_full")
 
     def combine(self, states: Iterable[SubsystemState]) -> Iterable[SubsystemState]:

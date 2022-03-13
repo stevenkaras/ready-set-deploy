@@ -1,8 +1,8 @@
-from ready_set_deploy.model import SubsystemState
+from ready_set_deploy.model import SubsystemState, SubsystemStateType
 
 
 class MultiversionPackageManagerMixin:
-    STATE_TYPE = NotImplemented
+    PROVIDER_NAME = NotImplemented
 
     def _elements_to_multiversions(self, elements: list[tuple[str, list[str]]]) -> dict[str, set[str]]:
         result: dict[str, set[str]] = {}
@@ -27,10 +27,8 @@ class MultiversionPackageManagerMixin:
 
     def diff(self, left: SubsystemState, right: SubsystemState) -> tuple[SubsystemState, SubsystemState]:
         # compute the diff that would transform left into right
-        assert not left.is_partial
-        assert not right.is_partial
-        assert left.is_desired
-        assert right.is_desired
+        assert left.state_type == SubsystemStateType.FULL
+        assert right.state_type == SubsystemStateType.FULL
         assert left.qualifier == right.qualifier
 
         left_packages = self._elements_to_multiversions(left.elements)
@@ -39,12 +37,18 @@ class MultiversionPackageManagerMixin:
         to_add = self._diff_multiversion(right_packages, left_packages)
         to_remove = self._diff_multiversion(left_packages, right_packages)
 
-        return SubsystemState(name=self.STATE_TYPE, is_partial=True, elements=self._multiversions_to_elements(to_add),), SubsystemState(
-            name=self.STATE_TYPE,
-            is_desired=False,
-            is_partial=True,
+        desired = SubsystemState(
+            name=self.PROVIDER_NAME,
+            state_type=SubsystemStateType.DESIRED,
+            elements=self._multiversions_to_elements(to_add),
+        )
+        undesired = SubsystemState(
+            name=self.PROVIDER_NAME,
+            state_type=SubsystemStateType.UNDESIRED,
             elements=self._multiversions_to_elements(to_remove),
         )
+
+        return desired, undesired
 
     def _add_multiversion(self, left: dict[str, set[str]], to_add: dict[str, set[str]]) -> dict[str, set[str]]:
         result = {}
@@ -68,19 +72,20 @@ class MultiversionPackageManagerMixin:
 
         return result
 
-    def apply_partial_to_full(self, left: SubsystemState, partial: SubsystemState) -> SubsystemState:
-        assert left.is_desired
-        assert partial.is_partial
+    def apply_partial_to_full(self, full: SubsystemState, partial: SubsystemState) -> SubsystemState:
+        assert full.state_type == SubsystemStateType.FULL
+        assert partial.state_type != SubsystemStateType.FULL
 
-        left_packages = self._elements_to_multiversions(left.elements)
+        full_packages = self._elements_to_multiversions(full.elements)
         partial_packages = self._elements_to_multiversions(partial.elements)
 
-        if partial.is_desired:
-            combined = self._add_multiversion(left_packages, partial_packages)
+        if partial.state_type == SubsystemStateType.DESIRED:
+            combined = self._add_multiversion(full_packages, partial_packages)
         else:
-            combined = self._remove_multiversion(left_packages, partial_packages)
+            combined = self._remove_multiversion(full_packages, partial_packages)
 
         return SubsystemState(
-            name=self.STATE_TYPE,
+            name=self.PROVIDER_NAME,
+            state_type=SubsystemStateType.FULL,
             elements=self._multiversions_to_elements(combined),
         )

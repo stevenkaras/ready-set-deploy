@@ -7,7 +7,7 @@ This provider handles all aspects of the homebrew packaging system
 from collections.abc import Iterable, Sequence
 from typing import Optional
 
-from ready_set_deploy.model import SubsystemState
+from ready_set_deploy.model import SubsystemState, SubsystemStateType
 from ready_set_deploy.runner import Runner
 from ready_set_deploy.providers.base import Provider
 from ready_set_deploy.providers.generic import GenericProviderMixin
@@ -16,19 +16,7 @@ _Elements = tuple[set, set, set]
 
 
 class HomebrewProvider(GenericProviderMixin[_Elements], Provider):
-    STATE_TYPE = "packages.homebrew"
-
-    @property
-    def TAPS_STATE_TYPE(self):
-        return f"{self.STATE_TYPE}.taps"
-
-    @property
-    def FORMULAS_STATE_TYPE(self):
-        return f"{self.STATE_TYPE}.formulas"
-
-    @property
-    def CASKS_STATE_TYPE(self):
-        return f"{self.STATE_TYPE}.casks"
+    PROVIDER_NAME = "packages.homebrew"
 
     def gather_local(self, previous_state: Optional[SubsystemState] = None) -> SubsystemState:
         command = "brew tap".split()
@@ -42,7 +30,8 @@ class HomebrewProvider(GenericProviderMixin[_Elements], Provider):
         formulas = [self._parse_formula(formula_info) for formula_info in info["formulae"]]
 
         return SubsystemState(
-            name=self.STATE_TYPE,
+            name=self.PROVIDER_NAME,
+            state_type=SubsystemStateType.FULL,
             elements=[
                 taps,
                 casks,
