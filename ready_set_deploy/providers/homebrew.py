@@ -106,3 +106,6 @@ class HomebrewProvider(GenericProviderMixin[_Elements], Provider):
         yield from Runner.to_commands("brew untap".split(), undesired_taps)
         yield from Runner.to_commands("brew uninstall".split(), undesired_formulas)
         yield from Runner.to_commands("brew uninstall --cask".split(), undesired_casks)
+
+    def is_valid(self, state: SubsystemState) -> Iterable[str]:
+        return []
