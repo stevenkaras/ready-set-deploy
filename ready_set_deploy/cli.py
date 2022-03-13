@@ -39,7 +39,7 @@ def gather(registry: ProviderRegistry, provider: str):
     substates = [registry.gather_local(provider) for provider in providers]
     state = SystemState.from_substates(substates)
 
-    print(json.dumps(state, cls=DataclassEncoder))
+    print(json.dumps(state, cls=DataclassEncoder, sort_keys=True))
 
 
 @main.command()
@@ -57,7 +57,7 @@ def diff(registry: ProviderRegistry, actual_file: TextIO, desired_file: TextIO):
 
     partial = diff_state(registry, actual, desired)
 
-    print(json.dumps(partial, cls=DataclassEncoder))
+    print(json.dumps(partial, cls=DataclassEncoder, sort_keys=True))
 
 
 @main.command()
@@ -71,7 +71,7 @@ def combine(registry: ProviderRegistry, state_files: Iterable[TextIO]):
 
     combined_state = combine_states(registry, *states)
 
-    print(json.dumps(combined_state, cls=DataclassEncoder))
+    print(json.dumps(combined_state, cls=DataclassEncoder, sort_keys=True))
 
 
 @main.command()

@@ -119,14 +119,14 @@ def main():
         json.loads(
             r"""
     {"subsystems": {"packages.homebrew": [{"name": "packages.homebrew", "qualifier": null, "state_type": "full", "elements": [
-        ["tap-shared", "tap-desired-only"],
-        [{"name": "cask-shared"}, {"name": "cask-desired-only"}],
-        [{"name": "formula-shared"}, {"name": "formula-desired-only"}]]}]}}
+        ["tap-desired-only", "tap-shared"],
+        [{"name": "cask-desired-only"}, {"name": "cask-shared"}],
+        [{"name": "formula-desired-only"}, {"name": "formula-shared"}]]}]}}
     """
         )
     )
     diff = diff_state(registry, actual, desired)
-    print(json.dumps(diff, cls=DataclassEncoder))
+    print(json.dumps(diff, cls=DataclassEncoder, sort_keys=True))
 
     partial = SystemState.from_dict(
         json.loads(
@@ -137,6 +137,11 @@ def main():
         [["tap-actual-only"], [{"name": "cask-actual-only"}], [{"name": "formula-actual-only"}]]}]}}"""
         )
     )
+
+    combined = combine_states(registry, partial, actual)
+    print(json.dumps(desired, cls=DataclassEncoder, sort_keys=True))
+    print(json.dumps(combined, cls=DataclassEncoder, sort_keys=True))
+
     import shlex
 
     for command in partial_to_commands(registry, partial):

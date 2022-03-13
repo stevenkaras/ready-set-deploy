@@ -21,13 +21,13 @@ class HomebrewProvider(GenericProviderMixin[_Elements], Provider):
     def gather_local(self, previous_state: Optional[SubsystemState] = None) -> SubsystemState:
         command = "brew tap".split()
         info = Runner.lines(command)
-        taps = list(info)
+        taps = list(sorted(info))
 
         command = "brew info --json=v2 --installed".split()
         info = Runner.json(command)
 
-        casks = [self._parse_cask(cask_info) for cask_info in info["casks"]]
-        formulas = [self._parse_formula(formula_info) for formula_info in info["formulae"]]
+        casks = list(sorted([self._parse_cask(cask_info) for cask_info in info["casks"]], key=lambda c: c["name"]))
+        formulas = list(sorted([self._parse_formula(formula_info) for formula_info in info["formulas"]], key=lambda c: c["name"]))
 
         return SubsystemState(
             name=self.PROVIDER_NAME,
@@ -59,9 +59,9 @@ class HomebrewProvider(GenericProviderMixin[_Elements], Provider):
     def convert_elements_back(self, elements: _Elements) -> list:
         taps, formulas, casks = elements
         return [
-            list(taps),
-            [{"name": formula} for formula in formulas],
-            [{"name": cask} for cask in casks],
+            list(sorted(taps)),
+            [{"name": formula} for formula in sorted(formulas)],
+            [{"name": cask} for cask in sorted(casks)],
         ]
 
     def diff_left_only(self, left: _Elements, right: _Elements) -> _Elements:
@@ -74,23 +74,23 @@ class HomebrewProvider(GenericProviderMixin[_Elements], Provider):
 
         return taps, formulas, casks
 
-    def add_elements(self, left: _Elements, partial: _Elements) -> _Elements:
+    def add_elements(self, left: _Elements, right: _Elements) -> _Elements:
         left_taps, left_formulas, left_casks = left
-        partial_taps, partial_formulas, partial_casks = partial
+        right_taps, right_formulas, right_casks = right
 
-        taps = left_taps | partial_taps
-        formulas = left_formulas | partial_formulas
-        casks = left_casks | partial_casks
+        taps = left_taps | right_taps
+        formulas = left_formulas | right_formulas
+        casks = left_casks | right_casks
 
         return taps, formulas, casks
 
-    def remove_elements(self, left: _Elements, partial: _Elements) -> _Elements:
+    def remove_elements(self, left: _Elements, right: _Elements) -> _Elements:
         left_taps, left_formulas, left_casks = left
-        partial_taps, partial_formulas, partial_casks = partial
+        right_taps, right_formulas, right_casks = right
 
-        taps = left_taps - partial_taps
-        formulas = left_formulas - partial_formulas
-        casks = left_casks - partial_casks
+        taps = left_taps - right_taps
+        formulas = left_formulas - right_formulas
+        casks = left_casks - right_casks
 
         return taps, formulas, casks
 

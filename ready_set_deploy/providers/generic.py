@@ -19,11 +19,11 @@ class GenericProviderMixin(Generic[_InternalElements]):
     def convert_elements(self, elements: list) -> _InternalElements:
         raise NotImplementedError("convert_elements")
 
-    def diff_left_only(self, left: _InternalElements, right: _InternalElements) -> _InternalElements:
-        raise NotImplementedError("diff_left_only")
-
     def convert_elements_back(self, elements: _InternalElements) -> list:
         raise NotImplementedError("convert_elements_back")
+
+    def diff_left_only(self, left: _InternalElements, right: _InternalElements) -> _InternalElements:
+        raise NotImplementedError("diff_left_only")
 
     def diff(self, actual: SubsystemState, desired: SubsystemState) -> tuple[SubsystemState, SubsystemState]:
         # compute the diff that would transform actual into desired
@@ -50,10 +50,10 @@ class GenericProviderMixin(Generic[_InternalElements]):
 
         return desired_state, undesired_state
 
-    def add_elements(self, left: _InternalElements, partial: _InternalElements) -> _InternalElements:
+    def add_elements(self, left: _InternalElements, right: _InternalElements) -> _InternalElements:
         raise NotImplementedError("add_elements")
 
-    def remove_elements(self, left: _InternalElements, partial: _InternalElements) -> _InternalElements:
+    def remove_elements(self, left: _InternalElements, right: _InternalElements) -> _InternalElements:
         raise NotImplementedError("remove_elements")
 
     def combine(self, states: Iterable[SubsystemState]) -> Iterable[SubsystemState]:
@@ -86,28 +86,20 @@ class GenericProviderMixin(Generic[_InternalElements]):
                 combined_undesired = cast(_InternalElements, combined_undesired)
                 full_elements = self.remove_elements(full_elements, combined_undesired)
 
-            return [SubsystemState(
-                name=self.PROVIDER_NAME,
-                state_type=SubsystemStateType.FULL,
-                elements=self.convert_elements_back(full_elements)
-            )]
+            return [SubsystemState(name=self.PROVIDER_NAME, state_type=SubsystemStateType.FULL, elements=self.convert_elements_back(full_elements))]
 
         states = []
         if combined_desired is not _empty:
             combined_desired = cast(_InternalElements, combined_desired)
             desired_state = SubsystemState(
-                name=self.PROVIDER_NAME,
-                state_type=SubsystemStateType.DESIRED,
-                elements=self.convert_elements_back(combined_desired)
+                name=self.PROVIDER_NAME, state_type=SubsystemStateType.DESIRED, elements=self.convert_elements_back(combined_desired)
             )
             states.append(desired_state)
 
         if combined_undesired is not _empty:
             combined_undesired = cast(_InternalElements, combined_undesired)
             undesired_state = SubsystemState(
-                name=self.PROVIDER_NAME,
-                state_type=SubsystemStateType.UNDESIRED,
-                elements=self.convert_elements_back(combined_undesired)
+                name=self.PROVIDER_NAME, state_type=SubsystemStateType.UNDESIRED, elements=self.convert_elements_back(combined_undesired)
             )
             states.append(undesired_state)
 
