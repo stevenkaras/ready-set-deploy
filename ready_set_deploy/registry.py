@@ -74,9 +74,6 @@ class ProviderRegistry(_Registry[Provider]):
     def diff(self, name: str, left: SubsystemState, right: SubsystemState) -> tuple[SubsystemState, SubsystemState]:
         return self.get(name).diff(left, right)
 
-    def apply_partial_to_full(self, name: str, full: SubsystemState, partial: SubsystemState) -> SubsystemState:
-        return self.get(name).apply_partial_to_full(full, partial)
-
     def combine(self, name: str, states: Iterable[SubsystemState]) -> Iterable[SubsystemState]:
         return self.get(name).combine(states)
 

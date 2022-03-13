@@ -1,8 +1,8 @@
 from typing import TypeVar, Optional
-from collections.abc import Iterable, Callable
+from collections.abc import Iterable, Callable, Hashable
 from collections import defaultdict
 
-_K = TypeVar("_K")
+_K = TypeVar("_K", bound=Hashable)
 _V = TypeVar("_V")
 
 
@@ -28,3 +28,11 @@ def iter_matching(*iters: Iterable[_V], key: Callable[[_V], _K], default: Option
 
     for k, items in by_key.items():
         yield k, items
+
+
+def bucketdict(iterable: Iterable[_V], /, key: Callable[[_V], _K]) -> dict[_K, list[_V]]:
+    buckets = {}
+    for item in iterable:
+        buckets.setdefault(key(item), []).append(item)
+
+    return buckets

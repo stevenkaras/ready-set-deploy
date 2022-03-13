@@ -33,8 +33,8 @@ Feature goals (some out of scope for the core project):
     - [x] gather ALL
     - [x] diff
     - [x] commands
-    - [ ] combine
-    - [ ] validate
+    - [x] combine
+    - [x] validate
 - [x] Modular providers
 - [ ] External providers
 

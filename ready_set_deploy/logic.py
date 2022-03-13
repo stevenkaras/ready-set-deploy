@@ -1,12 +1,11 @@
 from typing import cast
-from itertools import groupby
 from collections.abc import Iterable, Sequence
 
 from more_itertools import flatten
 
 from ready_set_deploy.registry import ProviderRegistry
 from ready_set_deploy.model import SubsystemStateType, SubsystemState, SystemState
-from ready_set_deploy.itertools import dict_matching, iter_matching
+from ready_set_deploy.itertools import dict_matching, iter_matching, bucketdict
 
 
 def diff_state(registry: ProviderRegistry, actual: SystemState, desired: SystemState) -> SystemState:
@@ -51,7 +50,7 @@ def combine_states(registry: ProviderRegistry, *args: SystemState) -> SystemStat
 
     all_subsystems = flatten(flatten(state.subsystems.values() for state in args))
 
-    for (name, _), subsystems in groupby(all_subsystems, key=lambda s: (s.name, s.qualifier)):
+    for (name, _), subsystems in bucketdict(all_subsystems, key=lambda s: (s.name, s.qualifier)).items():
         combined = registry.combine(name, subsystems)
         all_combined += combined
 
@@ -75,7 +74,7 @@ def is_valid(registry: ProviderRegistry, system_state: SystemState) -> Iterable[
     """
 
     for name, subsystems in system_state.subsystems.items():
-        for _, states in groupby(subsystems, lambda s: s.qualifier):
+        for states in bucketdict(subsystems, lambda s: s.qualifier).values():
             num_desired = sum(1 for state in states if state.state_type == SubsystemStateType.DESIRED)
             if num_desired > 1:
                 yield f"Found {num_desired} desired states. There must be at most 1"
