@@ -18,19 +18,9 @@ class _Registry(Generic[_V]):
         self._unloaded_handlers: dict[str, str] = {}
 
     @classmethod
-    def from_dict(cls, config: dict[str, Any]):
-        def _flatten_dict(d: dict[str, Any], current_path: list[str] = [], delimiter: str = ".") -> Iterable[tuple[str, str]]:
-            for key, val in d.items():
-                current_path.append(key)
-                if isinstance(val, dict):
-                    yield from _flatten_dict(val, current_path, delimiter)
-                else:
-                    yield delimiter.join(current_path), val
-                current_path.pop()
-            return d.items()
-
+    def from_dict(cls, config: dict[str, str]):
         registry = cls()
-        for name, handler in _flatten_dict(config):
+        for name, handler in config.items():
             registry.deferred_register(name, handler)
 
         return registry

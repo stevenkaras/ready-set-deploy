@@ -4,18 +4,11 @@ import shlex
 from collections.abc import Iterable
 
 import click
-import tomli
 
 from ready_set_deploy.model import DataclassEncoder, SystemState
 from ready_set_deploy.registry import ProviderRegistry
 from ready_set_deploy.logic import diff_state, combine_states, is_valid, partial_to_commands
-
-
-def load_registry_from_config(configpath="config.toml") -> ProviderRegistry:
-    with open(configpath, mode="rb") as f:
-        config = tomli.load(f)
-
-    return ProviderRegistry.from_dict(config)
+from ready_set_deploy.config import load_registry_from_config
 
 
 @click.group(invoke_without_command=True)
