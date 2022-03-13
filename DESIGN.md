@@ -46,4 +46,10 @@ RSD should allow providers to be built in whatever language/framework is easiest
 
 ### What does it mean that RSD is not a front end?
 
-RSD doesn't 
+RSD doesn't provide an API or interface for generating partial states.
+Use something like ansible to define your desired state and have it generate the partial state file.
+RSD can then combine with a baseline configuration to determine the full desired system state, then diff from the last known state to find the minimal steps to deploy.
+
+### What does it mean that RSD is not a back end?
+
+RSD doesn't execute any commands, and will never learn how to. If you want to execute commands, you will need to pipe it to bash or ssh or somesuch.
