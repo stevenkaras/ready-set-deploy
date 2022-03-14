@@ -28,7 +28,7 @@ Feature goals (some out of scope for the core project):
 
 # v1.0.0 Progress
 
-- [ ] CLI Interface
+- [x] CLI Interface
     - [x] gather
     - [x] gather ALL
     - [x] diff
@@ -36,15 +36,23 @@ Feature goals (some out of scope for the core project):
     - [x] combine
     - [x] validate
 - [x] Modular providers
-- [ ] External providers
+- [x] config file discovery
+- [x] builtin config
 
-Example providers:
+## Core providers:
 
 - [x] Homebrew
-- [ ] APT
-- [ ] ASDF
-- [ ] IPTables
 - [ ] File content
-- [ ] Docker
+
+# v1.1 Progress
+
+- [ ] external process providers
+
+## Core providers
+
+- [ ] Aptitude
+- [ ] IPTables
+- [ ] ASDF
 - [ ] Pip
 - [ ] Pipx
+- [ ] Docker
