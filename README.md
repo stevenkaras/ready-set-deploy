@@ -8,7 +8,7 @@ RSD is a deployment framework designed to use set theory to issue the least numb
 rsd validate state.json
 rsd gather PROVIDER.ID > provider_state.json
 rsd gather ALL > host_state.json
-rsd diff --from host_state.json --to role_state.json > plan.json
+rsd diff host_state.json role_state.json > plan.json
 rsd commands plan.json
 
 # Altogehter now
