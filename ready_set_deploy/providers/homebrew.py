@@ -18,7 +18,7 @@ _Elements = tuple[set, set, set]
 class HomebrewProvider(GenericProviderMixin[_Elements], Provider):
     PROVIDER_NAME = "packages.homebrew"
 
-    def gather_local(self, previous_state: Optional[SubsystemState] = None) -> SubsystemState:
+    def gather_local(self, *, qualifier: Optional[str] = None, previous_state: Optional[SubsystemState] = None) -> SubsystemState:
         command = "brew tap".split()
         info = Runner.lines(command)
         taps = list(sorted(info))

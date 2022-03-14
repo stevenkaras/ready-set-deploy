@@ -4,7 +4,7 @@ from ready_set_deploy.model import SubsystemState
 
 
 class Provider:
-    def gather_local(self, previous_state: Optional[SubsystemState] = None) -> SubsystemState:
+    def gather_local(self, *, qualifier: Optional[str] = None, previous_state: Optional[SubsystemState] = None) -> SubsystemState:
         raise NotImplementedError("gather_local")
 
     def diff(self, left: SubsystemState, right: SubsystemState) -> tuple[SubsystemState, SubsystemState]:

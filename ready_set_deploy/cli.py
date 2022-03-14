@@ -1,4 +1,4 @@
-from typing import TextIO
+from typing import TextIO, Optional
 import json
 import shlex
 from collections.abc import Iterable
@@ -19,17 +19,18 @@ def main(ctx):
 
 @main.command()
 @click.argument("PROVIDER")
+@click.option("--qualifier", default=None)
 @click.pass_obj
-def gather(registry: ProviderRegistry, provider: str):
+def gather(registry: ProviderRegistry, provider: str, qualifier: Optional[str] = None):
     """
     Gather the local subsystem state for PROVIDER
     """
     if provider.lower() == "all":
-        providers = registry.all()
+        providers = [provider for provider, _ in registry.all()]
     else:
         providers = [provider]
 
-    substates = [registry.gather_local(provider) for provider in providers]
+    substates = [registry.gather_local(provider, qualifier=qualifier) for provider in providers]
     state = SystemState.from_substates(substates)
 
     print(json.dumps(state, cls=DataclassEncoder, sort_keys=True))

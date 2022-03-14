@@ -1,6 +1,6 @@
 import logging
 import importlib
-from typing import Any, Optional, TypeVar, Generic, Union
+from typing import Optional, TypeVar, Generic, Union
 from collections.abc import Iterable, Sequence
 
 from ready_set_deploy.model import SubsystemState
@@ -58,8 +58,8 @@ class _Registry(Generic[_V]):
 
 
 class ProviderRegistry(_Registry[Provider]):
-    def gather_local(self, name: str, previous_state: Optional[SubsystemState] = None) -> SubsystemState:
-        return self.get(name).gather_local(previous_state)
+    def gather_local(self, name: str, *, qualifier: Optional[str] = None, previous_state: Optional[SubsystemState] = None) -> SubsystemState:
+        return self.get(name).gather_local(previous_state=previous_state, qualifier=qualifier)
 
     def diff(self, name: str, left: SubsystemState, right: SubsystemState) -> tuple[SubsystemState, SubsystemState]:
         return self.get(name).diff(left, right)
