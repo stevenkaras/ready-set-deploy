@@ -101,6 +101,14 @@ def validate(registry: ProviderRegistry, state_file: TextIO):
 
     return 1
 
+@main.command()
+@click.pass_obj
+def config(registry: ProviderRegistry):
+    """
+    Show the loaded configuration
+    """
+    print(registry)
+
 
 if __name__ == "__main__":
     main()
