@@ -12,6 +12,9 @@ DEFAULT_CONFIG_PATHS: list[str] = [
     "~/.config/rsd/config.toml",
     "./rsd.toml",
 ]
+BUILTIN_CONFIG = {
+    "packages.homebrew": "ready_set_deploy.providers.homebrew.HomebrewProvider",
+}
 
 
 def load_config(configpaths: list[str] = []) -> dict[str, str]:
@@ -36,6 +39,7 @@ def load_config(configpaths: list[str] = []) -> dict[str, str]:
         _load_configfile(path)
         for path in default_paths + user_paths
     ]
+    configs.insert(0, BUILTIN_CONFIG)
 
     return _merge_configs(*configs)
 
@@ -53,7 +57,7 @@ def _merge_configs(*configs: dict[str, Any]) -> dict[str, Any]:
 
     flattened = [dict(_flatten_dict(config)) for config in configs]
     result = {}
-    for key in chain.from_iterable(flattened):
+    for key in set(chain.from_iterable(flattened)):
         values = [flat[key] for flat in flattened if key in flat]
         result[key] = values[-1]
 
