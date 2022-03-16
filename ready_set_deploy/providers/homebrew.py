@@ -48,8 +48,8 @@ class HomebrewProvider(GenericProviderMixin[_Elements], Provider):
             state_type=SubsystemStateType.FULL,
             elements=[
                 taps,
-                casks,
                 formulas,
+                casks,
             ],
         )
 
@@ -111,15 +111,21 @@ class HomebrewProvider(GenericProviderMixin[_Elements], Provider):
     def to_commands(self, desired: Optional[SubsystemState], undesired: Optional[SubsystemState]) -> Iterable[Sequence[str]]:
         desired_elements = [[], [], []] if desired is None else desired.elements
         desired_taps, desired_formulas, desired_casks = self.convert_elements(desired_elements)
-        yield from Runner.to_commands("brew tap".split(), desired_taps)
-        yield from Runner.to_commands("brew install".split(), desired_formulas)
-        yield from Runner.to_commands("brew install --cask".split(), desired_casks)
+        if desired_taps:
+            yield from Runner.to_commands("brew tap".split(), desired_taps)
+        if desired_formulas:
+            yield from Runner.to_commands("brew install".split(), desired_formulas)
+        if desired_casks:
+            yield from Runner.to_commands("brew install --cask".split(), desired_casks)
 
         undesired_elements = [[], [], []] if undesired is None else undesired.elements
         undesired_taps, undesired_formulas, undesired_casks = self.convert_elements(undesired_elements)
-        yield from Runner.to_commands("brew untap".split(), undesired_taps)
-        yield from Runner.to_commands("brew uninstall".split(), undesired_formulas)
-        yield from Runner.to_commands("brew uninstall --cask".split(), undesired_casks)
+        if undesired_taps:
+            yield from Runner.to_commands("brew untap".split(), undesired_taps)
+        if undesired_formulas:
+            yield from Runner.to_commands("brew uninstall".split(), undesired_formulas)
+        if undesired_casks:
+            yield from Runner.to_commands("brew uninstall --cask".split(), undesired_casks)
 
     def is_valid(self, state: SubsystemState) -> Iterable[str]:
         return []
