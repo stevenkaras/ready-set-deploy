@@ -16,17 +16,28 @@ class _Registry(Generic[_V]):
     def __init__(self):
         self._loaded_handlers: dict[str, _V] = {}
         self._unloaded_handlers: dict[str, str] = {}
+        self._all: list[str] = []
 
     @classmethod
-    def from_dict(cls, config: dict[str, str]):
+    def from_dict(cls, config: dict[str, str], all: list[str] = []):
         registry = cls()
+        registry.set_all(all)
         for name, handler in config.items():
             registry.deferred_register(name, handler)
 
         return registry
 
+    def set_all(self, all: list[str]):
+        self._all = all
+
+    def all(self) -> Iterable[str]:
+        return self._all
+
     def deferred_register(self, name: str, handlerclass: str):
         self._unloaded_handlers[name] = handlerclass
+
+    def register(self, name: str, handler: _V):
+        self._loaded_handlers[name] = handler
 
     def _load_handler(self, handlerclass) -> _V:
         package_name, class_name = handlerclass.rsplit(".", maxsplit=1)
@@ -34,13 +45,6 @@ class _Registry(Generic[_V]):
         handler_class = getattr(module, class_name)
         handler = handler_class()
         return handler
-
-    def register(self, name: str, handler: _V):
-        self._loaded_handlers[name] = handler
-
-    def all(self) -> Iterable[tuple[str, str]]:
-        yield from ((name, str(handler)) for name, handler in self._loaded_handlers.items())
-        yield from ((name, handlerclass) for name, handlerclass in self._unloaded_handlers.items())
 
     def get(self, name: str) -> _V:
         handler = self._loaded_handlers.get(name)

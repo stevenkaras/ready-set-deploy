@@ -38,6 +38,7 @@ Feature goals (some out of scope for the core project):
 - [x] Modular providers
 - [x] config file discovery
 - [x] builtin config
+- [x] configurable "all" provider
 
 ## Core providers:
 
