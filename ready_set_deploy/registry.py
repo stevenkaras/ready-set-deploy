@@ -39,7 +39,7 @@ class _Registry(Generic[_V]):
         self._loaded_handlers[name] = handler
 
     def all(self) -> Iterable[tuple[str, str]]:
-        yield from ((name, str(handler)) for name, handler in self._load_handler.items())
+        yield from ((name, str(handler)) for name, handler in self._loaded_handlers.items())
         yield from ((name, handlerclass) for name, handlerclass in self._unloaded_handlers.items())
 
     def get(self, name: str) -> _V:
