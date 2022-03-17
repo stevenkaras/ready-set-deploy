@@ -12,7 +12,7 @@ rsd diff host_state.json role_state.json > plan.json
 rsd commands plan.json
 
 # Altogehter now
-bash -x <(rsd commands <(rsd diff --from <(rsd gather PROVIDER.ID) --to role_state.json ) )
+bash -x <(rsd diff <(rsd gather PROVIDER.ID) role_state.json | rsd commands - )
 ```
 
 # Design
