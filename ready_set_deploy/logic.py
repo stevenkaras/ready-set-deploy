@@ -8,18 +8,18 @@ from ready_set_deploy.model import SubsystemStateType, SubsystemState, SystemSta
 from ready_set_deploy.itertools import dict_matching, iter_matching, bucketdict
 
 
-def diff_state(registry: ProviderRegistry, actual: SystemState, desired: SystemState) -> SystemState:
+def diff_state(registry: ProviderRegistry, actual: SystemState, goal: SystemState) -> SystemState:
     """
-    Compute the partial state that when applied would move actual to the desired state
+    Compute the partial state that when applied would move actual to the goal state
     """
     all_partials = []
-    for name, (actual_states, desired_states) in dict_matching(actual.subsystems, desired.subsystems, default=[]):
+    for name, (actual_states, goal_states) in dict_matching(actual.subsystems, goal.subsystems, default=[]):
         actual_states = cast(list[SubsystemState], actual_states)
-        desired_states = cast(list[SubsystemState], desired_states)
-        for qualifier, (actual_state, desired_state) in iter_matching(actual_states, desired_states, key=lambda substate: substate.qualifier):
-            if actual_state is not None and desired_state is not None:
-                partials = registry.diff(name, actual_state, desired_state)
-            elif actual_state is not None and desired_state is None:
+        goal_states = cast(list[SubsystemState], goal_states)
+        for qualifier, (actual_state, goal_state) in iter_matching(actual_states, goal_states, key=lambda substate: substate.qualifier):
+            if actual_state is not None and goal_state is not None:
+                partials = registry.diff(name, actual_state, goal_state)
+            elif actual_state is not None and goal_state is None:
                 partials = [
                     SubsystemState(
                         name=name,
@@ -28,13 +28,13 @@ def diff_state(registry: ProviderRegistry, actual: SystemState, desired: SystemS
                         elements=actual_state.elements,
                     )
                 ]
-            elif actual_state is None and desired_state is not None:
+            elif actual_state is None and goal_state is not None:
                 partials = [
                     SubsystemState(
                         name=name,
                         qualifier=qualifier,
                         state_type=SubsystemStateType.DESIRED,
-                        elements=desired_state.elements,
+                        elements=goal_state.elements,
                     )
                 ]
             else:

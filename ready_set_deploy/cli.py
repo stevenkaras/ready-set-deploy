@@ -38,18 +38,18 @@ def gather(registry: ProviderRegistry, provider: str, qualifier: Optional[str] =
 
 @main.command()
 @click.argument("actual_file", metavar="ACTUAL", type=click.File("r"))
-@click.argument("desired_file", metavar="DESIRED", type=click.File("r"))
+@click.argument("goal_file", metavar="GOAL", type=click.File("r"))
 @click.pass_obj
-def diff(registry: ProviderRegistry, actual_file: TextIO, desired_file: TextIO):
+def diff(registry: ProviderRegistry, actual_file: TextIO, goal_file: TextIO):
     """
-    Compute the diff to move from ACTUAL to DESIRED
+    Compute the diff to move from ACTUAL to GOAL
     """
     actual_dict = json.load(actual_file)
     actual = SystemState.from_dict(actual_dict)
-    desired_dict = json.load(desired_file)
-    desired = SystemState.from_dict(desired_dict)
+    goal_dict = json.load(goal_file)
+    goal = SystemState.from_dict(goal_dict)
 
-    partial = diff_state(registry, actual, desired)
+    partial = diff_state(registry, actual, goal)
 
     print(json.dumps(partial, cls=DataclassEncoder, sort_keys=True))
 

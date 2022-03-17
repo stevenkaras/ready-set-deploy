@@ -7,7 +7,10 @@ class Provider:
     def gather_local(self, *, qualifier: Optional[str] = None, previous_state: Optional[SubsystemState] = None) -> SubsystemState:
         raise NotImplementedError("gather_local")
 
-    def diff(self, left: SubsystemState, right: SubsystemState) -> tuple[SubsystemState, SubsystemState]:
+    def diff(self, actual: SubsystemState, goal: SubsystemState) -> tuple[SubsystemState, SubsystemState]:
+        """
+        compute the desired and undesired partial states that would change actual to goal
+        """
         raise NotImplementedError("diff")
 
     def combine(self, states: Iterable[SubsystemState]) -> Iterable[SubsystemState]:

@@ -23,16 +23,19 @@ class GenericProviderMixin(Generic[_InternalElements]):
         raise NotImplementedError("convert_elements_back")
 
     def diff_left_only(self, left: _InternalElements, right: _InternalElements) -> _InternalElements:
+        """
+        Compute the elements that are in left that aren't in right
+        """
         raise NotImplementedError("diff_left_only")
 
-    def diff(self, actual: SubsystemState, desired: SubsystemState) -> tuple[SubsystemState, SubsystemState]:
+    def diff(self, actual: SubsystemState, goal: SubsystemState) -> tuple[SubsystemState, SubsystemState]:
         # compute the diff that would transform actual into desired
         assert actual.state_type == SubsystemStateType.FULL
-        assert desired.state_type == SubsystemStateType.FULL
-        assert actual.qualifier == desired.qualifier
+        assert goal.state_type == SubsystemStateType.FULL
+        assert actual.qualifier == goal.qualifier
 
         actual_packages = self.convert_elements(actual.elements)
-        desired_packages = self.convert_elements(desired.elements)
+        desired_packages = self.convert_elements(goal.elements)
 
         to_add = self.diff_left_only(desired_packages, actual_packages)
         to_remove = self.diff_left_only(actual_packages, desired_packages)
