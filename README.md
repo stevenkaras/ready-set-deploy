@@ -1,13 +1,13 @@
 # Ready-Set-Deploy!
 
-RSD is a deployment framework designed to use set theory to issue the least number of commands to bring a system to a desired state.
+RSD is a deployment framework designed to work offline-first without a centralized controller.
+RSD is not an execution framework, nor does it specify how desired state is defined.
 
 # Usage
 
 ```bash
 rsd validate state.json
 rsd gather PROVIDER.ID > provider_state.json
-rsd gather ALL > host_state.json
 rsd diff host_state.json role_state.json > plan.json
 rsd commands plan.json
 
@@ -38,7 +38,6 @@ Feature goals (some out of scope for the core project):
 - [x] Modular providers
 - [x] config file discovery
 - [x] builtin config
-- [x] configurable "all" provider
 
 ## Core providers:
 
@@ -48,6 +47,11 @@ Feature goals (some out of scope for the core project):
 # v1.1 Progress
 
 - [ ] external process providers
+- [ ] unit tests for core logic
+- [ ] unit tests for core providers
+- [ ] manpage
+- [ ] bash completion
+- [ ] gather "all" script for mac workstations
 
 ## Core providers
 

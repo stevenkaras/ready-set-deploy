@@ -5,7 +5,8 @@ This document aims to lay out the design philosophy and motivations behind RSD.
 ## Why existing solutions weren't sufficient
 
 Other systems take an imperative approach towards defining system state.
-Even those that ostensibly don't really do, just with a tiny bit of 
+Even those that ostensibly use declarative state don't really, and rely on idempotent actions instead.
+Moreover, all existing solutions rely on a centralized controller and don't allow introspection when the network is down.
 
 ## Driving tenets
 
