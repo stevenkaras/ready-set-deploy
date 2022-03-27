@@ -25,13 +25,7 @@ def gather(registry: ProviderRegistry, provider: str, qualifier: Optional[str] =
     """
     Gather the local subsystem state for PROVIDER
     """
-    if provider.lower() == "all":
-        providers = [provider for provider, _ in registry.all()]
-    else:
-        providers = [provider]
-
-    substates = [registry.gather_local(provider, qualifier=qualifier) for provider in providers]
-    state = SystemState.from_substates(substates)
+    state = SystemState.from_substates([registry.gather_local(provider, qualifier=qualifier)])
 
     print(json.dumps(state, cls=DataclassEncoder, sort_keys=True))
 

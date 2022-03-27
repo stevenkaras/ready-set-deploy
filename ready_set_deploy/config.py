@@ -1,5 +1,5 @@
 from itertools import chain
-from typing import Any, cast
+from typing import Any
 from collections.abc import Iterable
 import pathlib
 
@@ -14,7 +14,6 @@ DEFAULT_CONFIG_PATHS: list[str] = [
 ]
 BUILTIN_CONFIG = {
     "packages.homebrew": "ready_set_deploy.providers.homebrew.HomebrewProvider",
-    "all": ["packages.homebrew"],
 }
 
 
@@ -66,7 +65,4 @@ def _merge_configs(*configs: dict[str, Any]) -> dict[str, Any]:
 
 def load_registry_from_config(configpaths: list[str] = []) -> ProviderRegistry:
     merged_config = load_config(configpaths)
-    all_config = merged_config.pop("all", [])
-    all_config = cast(list[str], all_config)
-
-    return ProviderRegistry.from_dict(merged_config, all=all_config)
+    return ProviderRegistry.from_dict(merged_config)

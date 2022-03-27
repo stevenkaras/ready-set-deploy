@@ -16,22 +16,14 @@ class _Registry(Generic[_V]):
     def __init__(self):
         self._loaded_handlers: dict[str, _V] = {}
         self._unloaded_handlers: dict[str, str] = {}
-        self._all: list[str] = []
 
     @classmethod
-    def from_dict(cls, config: dict[str, str], all: list[str] = []):
+    def from_dict(cls, config: dict[str, str]):
         registry = cls()
-        registry.set_all(all)
         for name, handler in config.items():
             registry.deferred_register(name, handler)
 
         return registry
-
-    def set_all(self, all: list[str]):
-        self._all = all
-
-    def all(self) -> Iterable[str]:
-        return self._all
 
     def deferred_register(self, name: str, handlerclass: str):
         self._unloaded_handlers[name] = handlerclass
