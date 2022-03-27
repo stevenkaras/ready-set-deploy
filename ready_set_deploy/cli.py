@@ -49,7 +49,8 @@ def diff(registry: ProviderRegistry, actual_file: TextIO, goal_file: TextIO):
 
 
 @main.command()
-@click.argument("state_files", metavar="STATES", nargs=-2, type=click.File("r"))
+@click.argument("state_files", metavar="STATES", nargs=-1, type=click.File("r"))
+@click.pass_obj
 def combine(registry: ProviderRegistry, state_files: Iterable[TextIO]):
     """
     Combine multiple state files
