@@ -30,7 +30,7 @@ Feature goals (some out of scope for the core project):
 
 * Modular plugin system
 
-# v1.0.0 Progress
+# v1.0 Progress
 
 - [x] CLI Interface
     - [x] gather
