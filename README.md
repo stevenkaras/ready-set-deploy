@@ -13,8 +13,10 @@ rsd combine provider1_state.json provider2_state.json > host_state.json
 rsd diff host_state.json role_state.json > plan.json
 rsd commands plan.json
 
-# Altogehter now
-bash -x <(rsd diff <(rsd gather PROVIDER.ID) role_state.json | rsd commands - )
+# As individual steps
+bash -x <(rsd diff <(rsd providers role_state.json | rsd gather-all) role_state.json | rsd commands -)
+# Or all together in a single command
+bash -x <(rsd apply role_state.json)
 ```
 
 # Design
@@ -52,7 +54,7 @@ Feature goals (some out of scope for the core project):
 - [ ] unit tests for core logic
 - [ ] unit tests for core providers
 - [ ] better CLI support for filtering/extracting information
-- [ ] gather multiple providers/qualifiers in one invocation
+- [x] gather multiple providers/qualifiers in one invocation
 - [ ] manpage
 - [ ] bash completion
 
