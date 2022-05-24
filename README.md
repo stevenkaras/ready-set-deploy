@@ -21,48 +21,5 @@ bash -x <(rsd apply role_state.json)
 
 # Design
 
-RSD uses a three phase process: fact gathering, diff, and execution.
-Plugins provide functionality for all three phases, although each come with defaults.
-
-The main design goal is minimal computational effort.
-
-Feature goals (some out of scope for the core project):
-
-* Modular plugin system
-
-# v1.0 Progress
-
-- [x] CLI Interface
-    - [x] gather
-    - [x] gather ALL
-    - [x] diff
-    - [x] commands
-    - [x] combine
-    - [x] validate
-- [x] Modular providers
-- [x] config file discovery
-- [x] builtin config
-
-## Core providers:
-
-- [x] Homebrew
-- [ ] File content
-
-# v1.1 Progress
-
-- [ ] external process providers
-- [ ] unit tests for core logic
-- [ ] unit tests for core providers
-- [ ] better CLI support for filtering/extracting information
-- [x] gather multiple providers/qualifiers in one invocation
-- [ ] manpage
-- [ ] bash completion
-
-## Core providers
-
-- [ ] Aptitude
-- [ ] IPTables
-- [ ] ASDF
-- [ ] Pip
-- [ ] Pipx
-- [ ] Docker
+RSD is split into three general phases: building the state, diffing the state, and rendering the state.
+The main design goal is minimal computational effort, and offline manipulation of the ideal system configuration state.
