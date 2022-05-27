@@ -1,5 +1,5 @@
 from collections.abc import Iterable, MutableMapping
-from typing import Generic, Iterator, Optional, TypeVar, cast
+from typing import Generic, Iterator, Optional, TypeVar, cast, Type
 import difflib
 from enum import Enum
 
@@ -32,9 +32,21 @@ class FullElement(Element):
         """
         raise NotImplementedError("zero")
 
+    @classmethod
+    def diff_type(cls) -> Type["DiffElement"]:
+        """
+        Return the full type associated with this diff type
+        """
+        raise NotImplementedError("diff_type")
+
 
 class DiffElement(Element):
-    pass
+    @classmethod
+    def full_type(cls) -> Type[FullElement]:
+        """
+        Return the diff type associated with this full type
+        """
+        raise NotImplementedError("full_type")
 
 
 class Atom(FullElement):
@@ -48,6 +60,10 @@ class Atom(FullElement):
     @classmethod
     def zero(cls) -> FullElement:
         return cls("")
+
+    @classmethod
+    def diff_type(cls) -> Type[DiffElement]:
+        return AtomDiff
 
     def diff(self, other: FullElement) -> DiffElement:
         if not isinstance(other, type(self)):
@@ -117,6 +133,10 @@ class AtomDiff(DiffElement):
     def __init__(self, value: str) -> None:
         self.value = value
 
+    @classmethod
+    def full_type(cls) -> Type[FullElement]:
+        return Atom
+
     def __str__(self) -> str:
         return self.value
 
@@ -135,6 +155,10 @@ class Set(FullElement):
     @classmethod
     def zero(cls) -> FullElement:
         return cls(set())
+
+    @classmethod
+    def diff_type(cls) -> Type[DiffElement]:
+        return SetDiff
 
     def diff(self, other: FullElement) -> DiffElement:
         if not isinstance(other, type(self)):
@@ -187,6 +211,10 @@ class SetDiff(DiffElement):
         self.to_add = to_add
         self.to_remove = to_remove
 
+    @classmethod
+    def full_type(cls) -> Type[FullElement]:
+        return Set
+
     def __str__(self) -> str:
         return f"(+{self.to_add} -{self.to_remove})"
 
@@ -195,7 +223,7 @@ class SetDiff(DiffElement):
 
 
 _F = TypeVar("_F", bound=FullElement)
-_D = TypeVar("_D", bound=DiffElement, contravariant=True)
+_D = TypeVar("_D", bound=DiffElement)
 
 
 class _GenericMap(FullElement, Generic[_F, _D]):
@@ -206,28 +234,35 @@ class _GenericMap(FullElement, Generic[_F, _D]):
     def zero(cls) -> FullElement:
         return cls({})
 
+    @classmethod
+    def diff_type(cls) -> Type[DiffElement]:
+        return _GenericMapDiff
+
     def diff(self, other: FullElement) -> DiffElement:
         if not isinstance(other, type(self)):
             raise TypeError(f"{type(self)} are only diffable against other {type(self)}. Got {type(other)}")
         keys_to_remove = set(self._map.keys()) - set(other._map.keys())
         items_to_add = [(key, value) for key, value in other._map.items() if key not in self._map]
-        items_to_set: list[tuple[Atom, DiffElement]] = [
+        raw_items_to_set = [
             (key, self._map[key].diff(value)) for key, value in other._map.items() if key in self._map and self._map[key] != value
         ]
-        return _GenericMapDiff(keys_to_remove, items_to_add, items_to_set)
+        items_to_set = cast(list[tuple[Atom, _D]], raw_items_to_set)
+        diff_type = cast(Type[_GenericMapDiff[_F, _D]], self.diff_type())
+        return diff_type(keys_to_remove, items_to_add, items_to_set)
 
     def apply(self, other: DiffElement) -> FullElement:
-        if not isinstance(other, _GenericMapDiff):
-            raise TypeError(f"{type(self)}s can only be applied with _GenericMapDiff. Got {type(other)}")
+        if not isinstance(other, self.diff_type()):
+            raise TypeError(f"{type(self)}s can only be applied with {self.diff_type}. Got {type(other)}")
+        other = cast(_GenericMapDiff[_F, _D], other)
         new_map = dict(self._map)
         for key in other.keys_to_remove:
             del new_map[key]
 
-        for key, value in other.items_to_set:
-            new_map[key] = cast(_F, self._map[key].apply(value))
+        for key, to_set in other.items_to_set:
+            new_map[key] = cast(_F, self._map[key].apply(to_set))
 
-        for key, value in other.items_to_add:
-            new_map[key] = value
+        for key, to_add in other.items_to_add:
+            new_map[key] = to_add
 
         return self.__class__(new_map)
 
@@ -283,6 +318,10 @@ class _GenericMapDiff(DiffElement, Generic[_F, _D]):
         self.items_to_set = items_to_set
         self.items_to_add = items_to_add
 
+    @classmethod
+    def full_type(cls) -> Type[FullElement]:
+        return _GenericMap
+
     def __str__(self) -> str:
         return f"(+{self.items_to_add} ~{self.items_to_set} -{self.keys_to_remove})"
 
@@ -295,11 +334,30 @@ class Map(_GenericMap[Atom, AtomDiff]):
     A map is a mapping of Atoms to Atoms
     """
 
+    @classmethod
+    def diff_type(cls) -> Type[DiffElement]:
+        return MapDiff
+
+
+class MapDiff(_GenericMapDiff[Atom, AtomDiff]):
+    @classmethod
+    def full_type(cls) -> Type[FullElement]:
+        return Map
+
 
 class MultiMap(_GenericMap[Set, SetDiff]):
     """
     A multimap is a mapping of Atoms to multiple Atoms
     """
+
+    @classmethod
+    def diff_type(cls) -> Type[DiffElement]:
+        return MultiMapDiff
+
+class MultiMapDiff(_GenericMapDiff[Atom, AtomDiff]):
+    @classmethod
+    def full_type(cls) -> Type[FullElement]:
+        return MultiMap
 
 
 class _DiffOpcode(Enum):
@@ -320,6 +378,10 @@ class List(FullElement):
     @classmethod
     def zero(cls) -> FullElement:
         return cls([])
+
+    @classmethod
+    def diff_type(cls) -> Type[DiffElement]:
+        return ListDiff
 
     def diff(self, other: FullElement) -> DiffElement:
         if not isinstance(other, type(self)):
@@ -416,6 +478,10 @@ class List(FullElement):
 class ListDiff(DiffElement):
     def __init__(self, diff: list[tuple[str, int, str]]) -> None:
         self.diff = diff
+
+    @classmethod
+    def full_type(cls) -> Type[FullElement]:
+        return List
 
     def __str__(self) -> str:
         return str(self.diff)
