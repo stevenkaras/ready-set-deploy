@@ -25,6 +25,13 @@ class FullElement(Element):
         """
         raise NotImplementedError("apply")
 
+    @classmethod
+    def zero(cls) -> "FullElement":
+        """
+        Generate a zero-element of the given type
+        """
+        raise NotImplementedError("zero")
+
 
 class DiffElement(Element):
     pass
@@ -37,6 +44,10 @@ class Atom(FullElement):
 
     def __init__(self, value: str) -> None:
         self.value = value
+
+    @classmethod
+    def zero(cls) -> FullElement:
+        return cls("")
 
     def diff(self, other: FullElement) -> DiffElement:
         if not isinstance(other, type(self)):
@@ -121,6 +132,10 @@ class Set(FullElement):
     def __init__(self, atoms: set[Atom]) -> None:
         self._atoms = atoms
 
+    @classmethod
+    def zero(cls) -> FullElement:
+        return cls(set())
+
     def diff(self, other: FullElement) -> DiffElement:
         if not isinstance(other, type(self)):
             raise TypeError(f"{type(self)} are only diffable against other {type(self)}. Got {type(other)}")
@@ -186,6 +201,10 @@ _D = TypeVar("_D", bound=DiffElement, contravariant=True)
 class _GenericMap(FullElement, Generic[_F, _D]):
     def __init__(self, map: MutableMapping[Atom, _F]) -> None:
         self._map = map
+
+    @classmethod
+    def zero(cls) -> FullElement:
+        return cls({})
 
     def diff(self, other: FullElement) -> DiffElement:
         if not isinstance(other, type(self)):
@@ -297,6 +316,10 @@ class List(FullElement):
 
     def __init__(self, atoms: list[Atom]) -> None:
         self._atoms = atoms
+
+    @classmethod
+    def zero(cls) -> FullElement:
+        return cls([])
 
     def diff(self, other: FullElement) -> DiffElement:
         if not isinstance(other, type(self)):
