@@ -333,6 +333,19 @@ class _GenericMapDiff(DiffElement, Generic[_F, _D]):
         return str(self)
 
 
+def generate_map_type(name: str, full_type: Type[_F], diff_type: Type[_D]) -> tuple[Type[_GenericMap[_F, _D]], Type[_GenericMapDiff[_F, _D]]]:
+    types: list[Type] = []
+    full = type(name, (_GenericMap,), {
+        "diff_type": classmethod(lambda cls: types[1])
+    })
+    types.append(full)
+    diff = type(f"{name}Diff", (_GenericMapDiff,), {
+        "full_type": classmethod(lambda cls: types[0])
+    })
+    types.append(diff)
+    return full, diff
+
+
 class Map(_GenericMap[Atom, AtomDiff]):
     """
     A map is a mapping of Atoms to Atoms
@@ -347,6 +360,24 @@ class MapDiff(_GenericMapDiff[Atom, AtomDiff]):
     @classmethod
     def full_type(cls) -> Type[FullElement]:
         return Map
+
+
+class NestedMap(_GenericMap[Map, MapDiff]):
+    """
+    A nested map is a mapping of Atoms to maps of atoms to atoms.
+
+    This is useful to model the installation options of packages
+    """
+
+    @classmethod
+    def diff_type(cls) -> Type[DiffElement]:
+        return NestedMapDiff
+
+
+class NestedMapDiff(_GenericMapDiff[Map, MapDiff]):
+    @classmethod
+    def full_type(cls) -> Type[FullElement]:
+        return NestedMap
 
 
 class MultiMap(_GenericMap[Set, SetDiff]):

@@ -1,7 +1,7 @@
 import unittest
-from typing import cast
+from typing import cast, Type
 
-from ready_set_deploy.elements import Atom, Set, SetDiff, Map, MultiMap, List
+from ready_set_deploy.elements import Atom, Set, SetDiff, Map, MultiMap, List, _GenericMap, MapDiff, _GenericMapDiff, DiffElement, FullElement, generate_map_type
 
 
 class TestAtom(unittest.TestCase):
@@ -91,6 +91,46 @@ class TestMultiMap(unittest.TestCase):
         diffed = mmapA.diff(mmapB)
         applied = mmapA.apply(diffed)
         assert applied == mmapB
+
+
+class TestComplexMap(unittest.TestCase):
+    def test_map_of_maps(self):
+        NestedMap, _ = generate_map_type("NestedMap", Map, MapDiff)
+
+        optsA = NestedMap({
+            Atom("a"): Map({
+                Atom("name"): Atom("a"),
+            }),
+            Atom("unchanged"): Map({
+                Atom("name"): Atom("unchanged"),
+            }),
+            Atom("changed"): Map({
+                Atom("name"): Atom("changed"),
+            }),
+            Atom("nested"): Map({
+                Atom("name"): Atom("nested"),
+                Atom("prefix"): Atom("a"),
+            }),
+        })
+        optsB = NestedMap({
+            Atom("b"): Map({
+                Atom("name"): Atom("b"),
+            }),
+            Atom("unchanged"): Map({
+                Atom("name"): Atom("unchanged"),
+            }),
+            Atom("changed"): Map({
+                Atom("name"): Atom("changedB"),
+            }),
+            Atom("nested"): Map({
+                Atom("name"): Atom("nested"),
+                Atom("prefix"): Atom("b"),
+            }),
+        })
+
+        diffed = optsA.diff(optsB)
+        applied = optsA.apply(diffed)
+        assert applied == optsB
 
 
 class TestList(unittest.TestCase):
