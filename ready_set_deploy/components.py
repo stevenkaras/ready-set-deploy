@@ -57,6 +57,14 @@ class Component(Generic[_E]):
             elements=new_elements,
         )
 
+    def zerodiff(self) -> "Component":
+        return Component(
+            name=self.name,
+            dependencies=self.dependencies,
+            qualifier=self.qualifier,
+            elements={name: element.zero().diff(element) for name, element in cast(dict[str, FullElement], self.elements).items()},
+        )
+
     def apply(self, other: "Component") -> "Component":
         self._validate_compatible(other)
         if not self.is_full() or not other.is_partial():
@@ -73,6 +81,22 @@ class Component(Generic[_E]):
             elements=new_elements,
         )
 
+    def zeroapply(self) -> "Component":
+        return Component(
+            name=self.name,
+            dependencies=self.dependencies,
+            qualifier=self.qualifier,
+            elements={name: element.full_type().zero().apply(element) for name, element in cast(dict[str, DiffElement], self.elements).items()},
+        )
+
+    def copy(self) -> "Component":
+        return Component(
+            name=self.name,
+            dependencies=self.dependencies,
+            qualifier=self.qualifier,
+            elements={name: element.copy() for name, element in self.elements.items()},
+        )
+
     def __str__(self):
         qualifier = "" if not self.qualifier else f" {{{self.qualifier}}}"
         return f"<Component.{self.name}{qualifier} e={self.elements}>"
@@ -83,6 +107,7 @@ class Component(Generic[_E]):
 
 if __name__ == "__main__":
     from ready_set_deploy.elements import Atom
+
     empty = Component(name="empty", dependencies=[], qualifier=[], elements={})
     assert empty.is_partial()
     assert empty.is_full()
@@ -93,3 +118,8 @@ if __name__ == "__main__":
     diffed = cfoo1.diff(cfoo2)
     applied = cfoo1.apply(diffed)
     assert applied == cfoo2
+
+    cfoo1 = Component(name="foo", dependencies=[], qualifier=[], elements={"foo": Atom("foobar")})
+    diffed = cfoo1.zerodiff()
+    applied = diffed.zeroapply()
+    assert applied == cfoo1

@@ -18,6 +18,17 @@ class TestComponent(unittest.TestCase):
         assert empty.is_full()
         assert empty.is_valid()
 
+    def test_zerodiffapply(self):
+        cfoo1 = Component(name="foo", dependencies=[], qualifier=[], elements={"foo": Atom("foobar")})
+        diffed = cfoo1.zerodiff()
+        applied = diffed.zeroapply()
+        assert applied == cfoo1
+
+    def test_copy(self):
+        cfoo1 = Component(name="foo", dependencies=[], qualifier=[], elements={"foo": Atom("foobar")})
+        copied = cfoo1.copy()
+        assert copied == cfoo1
+
 
 if __name__ == "__main__":
     unittest.main()
