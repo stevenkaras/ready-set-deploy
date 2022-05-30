@@ -15,7 +15,7 @@ class Component(Generic[_E]):
     elements: dict[str, _E] = dataclasses.field(default_factory=dict)
 
     @property
-    def dependency_key(self):
+    def dependency_key(self) -> tuple[str, tuple[str, ...]]:
         return (self.name, self.qualifier)
 
     def is_partial(self) -> bool:
