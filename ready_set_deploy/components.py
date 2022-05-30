@@ -10,8 +10,8 @@ _E = TypeVar("_E", DiffElement, FullElement)
 @dataclasses.dataclass
 class Component(Generic[_E]):
     name: str
-    dependencies: list[tuple[str, list[str]]] = dataclasses.field(default_factory=list)
-    qualifier: list[str] = dataclasses.field(default_factory=list)
+    dependencies: list[tuple[str, tuple[str, ...]]] = dataclasses.field(default_factory=list)
+    qualifier: tuple[str, ...] = dataclasses.field(default_factory=tuple)
     elements: dict[str, _E] = dataclasses.field(default_factory=dict)
 
     @property
@@ -108,18 +108,18 @@ class Component(Generic[_E]):
 if __name__ == "__main__":
     from ready_set_deploy.elements import Atom
 
-    empty = Component(name="empty", dependencies=[], qualifier=[], elements={})
+    empty = Component(name="empty", dependencies=[], qualifier=(), elements={})
     assert empty.is_partial()
     assert empty.is_full()
     assert empty.is_valid()
 
-    cfoo1 = Component(name="foo", dependencies=[], qualifier=[], elements={"foo": Atom("foobar")})
-    cfoo2 = Component(name="foo", dependencies=[], qualifier=[], elements={"foo": Atom("foobaz")})
+    cfoo1 = Component(name="foo", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")})
+    cfoo2 = Component(name="foo", dependencies=[], qualifier=(), elements={"foo": Atom("foobaz")})
     diffed = cfoo1.diff(cfoo2)
     applied = cfoo1.apply(diffed)
     assert applied == cfoo2
 
-    cfoo1 = Component(name="foo", dependencies=[], qualifier=[], elements={"foo": Atom("foobar")})
+    cfoo1 = Component(name="foo", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")})
     diffed = cfoo1.zerodiff()
     applied = diffed.zeroapply()
     assert applied == cfoo1
