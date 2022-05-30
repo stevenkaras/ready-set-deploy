@@ -39,6 +39,12 @@ class FullElement(Element):
         """
         raise NotImplementedError("diff_type")
 
+    def copy(self) -> "FullElement":
+        """
+        Return a deep copy of this element
+        """
+        raise NotImplementedError("copy")
+
 
 class DiffElement(Element):
     @classmethod
@@ -47,6 +53,12 @@ class DiffElement(Element):
         Return the diff type associated with this full type
         """
         raise NotImplementedError("full_type")
+
+    def copy(self) -> "DiffElement":
+        """
+        Return a deep copy of this element
+        """
+        raise NotImplementedError("copy")
 
 
 class Atom(FullElement):
@@ -57,9 +69,12 @@ class Atom(FullElement):
     def __init__(self, value: str) -> None:
         self.value = value
 
+    def copy(self) -> FullElement:
+        return self.__class__(value=self.value)
+
     @classmethod
     def zero(cls) -> FullElement:
-        return cls("")
+        return cls(value="")
 
     @classmethod
     def diff_type(cls) -> Type[DiffElement]:
@@ -68,12 +83,14 @@ class Atom(FullElement):
     def diff(self, other: FullElement) -> DiffElement:
         if not isinstance(other, type(self)):
             raise TypeError(f"{type(self)} are only diffable against other {type(self)}. Got {type(other)}")
-        return AtomDiff(other.value)
+        diff_type = cast(Type[AtomDiff], self.diff_type())
+        return diff_type(value=other.value)
 
     def apply(self, other: DiffElement) -> FullElement:
-        if not isinstance(other, AtomDiff):
+        if not isinstance(other, self.diff_type()):
             raise TypeError(f"{type(self)}s can only be applied with Atom. Got {type(other)}")
-        return Atom(other.value)
+        other = cast(AtomDiff, other)
+        return self.__class__(value=other.value)
 
     def __hash__(self) -> int:
         return hash(self.value)
@@ -90,48 +107,13 @@ class Atom(FullElement):
     def __repr__(self) -> str:
         return str(self)
 
-    def encode(self) -> str:
-        """
-        Encode backslashes and newlines to ensure the atom fits on one line
-        """
-        r = ""
-        for c in self.value:
-            if c == "\\":
-                r += "\\\\"
-            elif c == "\n":
-                r += "\\n"
-            else:
-                r += c
-        return r
-
-    @classmethod
-    def decode(cls, value: str) -> "Atom":
-        """
-        Decode an encoded atom
-        """
-        r = ""
-        i = 0
-        while i < len(value):
-            c = value[i]
-            i += 1
-            if c == "\\":
-                c = value[i]
-                i += 1
-                if c == "\\":
-                    r += "\\"
-                elif c == "n":
-                    r += "\n"
-                else:
-                    r += c
-            else:
-                r += c
-
-        return Atom(r)
-
 
 class AtomDiff(DiffElement):
     def __init__(self, value: str) -> None:
         self.value = value
+
+    def copy(self):
+        return self.__class__(value=self.value)
 
     @classmethod
     def full_type(cls) -> Type[FullElement]:
@@ -152,9 +134,12 @@ class Set(FullElement):
     def __init__(self, atoms: set[Atom]) -> None:
         self._atoms = atoms
 
+    def copy(self):
+        return self.__class__(atoms=set(self._atoms))
+
     @classmethod
     def zero(cls) -> FullElement:
-        return cls(set())
+        return cls(atoms=set())
 
     @classmethod
     def diff_type(cls) -> Type[DiffElement]:
@@ -163,12 +148,14 @@ class Set(FullElement):
     def diff(self, other: FullElement) -> DiffElement:
         if not isinstance(other, type(self)):
             raise TypeError(f"{type(self)} are only diffable against other {type(self)}. Got {type(other)}")
-        return SetDiff(other._atoms - self._atoms, self._atoms - other._atoms)
+        diff_type = cast(Type[SetDiff], self.diff_type())
+        return diff_type(to_add=other._atoms - self._atoms, to_remove=self._atoms - other._atoms)
 
     def apply(self, other: DiffElement) -> FullElement:
-        if not isinstance(other, SetDiff):
+        if not isinstance(other, self.diff_type()):
             raise TypeError(f"{type(self)}s can only be applied with SetDiff. Got {type(other)}")
-        return Set((self._atoms - other.to_remove) | other.to_add)
+        other = cast(SetDiff, other)
+        return self.__class__(atoms=(self._atoms - other.to_remove) | other.to_add)
 
     def add(self, value: Atom) -> "Set":
         """
@@ -211,6 +198,9 @@ class SetDiff(DiffElement):
         self.to_add = to_add
         self.to_remove = to_remove
 
+    def copy(self):
+        return self.__class__(to_add=self.to_add, to_remove=self.to_remove)
+
     @classmethod
     def full_type(cls) -> Type[FullElement]:
         return Set
@@ -230,9 +220,15 @@ class _GenericMap(FullElement, Generic[_F, _D]):
     def __init__(self, map: MutableMapping[Atom, _F]) -> None:
         self._map = map
 
+    def copy(self):
+        return self.__class__(map={
+            key: value.copy()
+            for key, value in self._map.items()
+        })
+
     @classmethod
     def zero(cls) -> FullElement:
-        return cls({})
+        return cls(map={})
 
     @classmethod
     def diff_type(cls) -> Type[DiffElement]:
@@ -242,13 +238,14 @@ class _GenericMap(FullElement, Generic[_F, _D]):
         if not isinstance(other, type(self)):
             raise TypeError(f"{type(self)} are only diffable against other {type(self)}. Got {type(other)}")
         keys_to_remove = set(self._map.keys()) - set(other._map.keys())
-        items_to_add = [(key, value) for key, value in other._map.items() if key not in self._map]
+        raw_items_to_add = [(key, value.copy()) for key, value in other._map.items() if key not in self._map]
+        items_to_add = cast(list[tuple[Atom, _F]], raw_items_to_add)
         raw_items_to_set = [
             (key, self._map[key].diff(value)) for key, value in other._map.items() if key in self._map and self._map[key] != value
         ]
         items_to_set = cast(list[tuple[Atom, _D]], raw_items_to_set)
         diff_type = cast(Type[_GenericMapDiff[_F, _D]], self.diff_type())
-        return diff_type(keys_to_remove, items_to_add, items_to_set)
+        return diff_type(keys_to_remove=keys_to_remove, items_to_add=items_to_add, items_to_set=items_to_set)
 
     def apply(self, other: DiffElement) -> FullElement:
         if not isinstance(other, self.diff_type()):
@@ -264,7 +261,7 @@ class _GenericMap(FullElement, Generic[_F, _D]):
         for key, to_add in other.items_to_add:
             new_map[key] = to_add
 
-        return self.__class__(new_map)
+        return self.__class__(map=new_map)
 
     def __getitem__(self, key: Atom) -> _F:
         return self._map[key]
@@ -317,6 +314,13 @@ class _GenericMapDiff(DiffElement, Generic[_F, _D]):
         self.keys_to_remove = keys_to_remove
         self.items_to_set = items_to_set
         self.items_to_add = items_to_add
+
+    def copy(self):
+        return self.__class__(
+            keys_to_remove=self.keys_to_remove,
+            items_to_add=self.items_to_add,
+            items_to_set=self.items_to_set,
+        )
 
     @classmethod
     def full_type(cls) -> Type[FullElement]:
@@ -375,9 +379,12 @@ class List(FullElement):
     def __init__(self, atoms: list[Atom]) -> None:
         self._atoms = atoms
 
+    def copy(self):
+        return self.__class__(atoms=list(self._atoms))
+
     @classmethod
     def zero(cls) -> FullElement:
-        return cls([])
+        return cls(atoms=[])
 
     @classmethod
     def diff_type(cls) -> Type[DiffElement]:
@@ -386,40 +393,40 @@ class List(FullElement):
     def diff(self, other: FullElement) -> DiffElement:
         if not isinstance(other, type(self)):
             raise TypeError(f"{type(self)} are only diffable against other {type(self)}. Got {type(other)}")
-        self_atoms = [atom.encode() for atom in self._atoms]
-        other_atoms = [atom.encode() for atom in other._atoms]
-        matcher = difflib.SequenceMatcher(a=self_atoms, b=other_atoms)
+        matcher = difflib.SequenceMatcher(a=self._atoms, b=other._atoms)
         diff: list[tuple[str, int, str]] = []
         for group in matcher.get_grouped_opcodes(n=1):
             for opcode, self_start, self_end, other_start, other_end in group:
                 if opcode == "equal":
                     for idx in range(other_start, other_end):
-                        diff.append((_DiffOpcode.EQUAL.value, idx, other_atoms[idx]))
+                        diff.append((_DiffOpcode.EQUAL.value, idx, other._atoms[idx].value))
                 elif opcode == "replace":
                     for idx in range(other_start, other_end):
-                        diff.append((_DiffOpcode.REPLACE.value, idx, other_atoms[idx]))
+                        diff.append((_DiffOpcode.REPLACE.value, idx, other._atoms[idx].value))
                 elif opcode == "insert":
                     for idx in range(other_start, other_end):
-                        diff.append((_DiffOpcode.INSERT.value, idx, other_atoms[idx]))
+                        diff.append((_DiffOpcode.INSERT.value, idx, other._atoms[idx].value))
                 elif opcode == "delete":
                     for idx in range(self_start, self_end):
-                        diff.append((_DiffOpcode.DELETE.value, other_start, self_atoms[idx]))
+                        diff.append((_DiffOpcode.DELETE.value, other_start, self._atoms[idx].value))
                 else:
                     raise ValueError(f"Invalid opcode {opcode}")
 
-        return ListDiff(diff)
+        diff_type = cast(Type[ListDiff], self.diff_type())
+        return diff_type(diff=diff)
 
-    def _apply_opcodes(self, atoms: list[str], opcodes: list[tuple[str, int, str]]) -> list[str]:
+    def _apply_opcodes(self, atoms: list[Atom], opcodes: list[tuple[str, int, str]]) -> list[Atom]:
         for raw_opcode, idx, replacement in opcodes:
+            atom = Atom(replacement)
             opcode = _DiffOpcode(raw_opcode)
             if opcode == _DiffOpcode.EQUAL:
                 actual = atoms[idx]
-                if replacement is not None and actual != replacement:
-                    raise ValueError(f"Diffs don't match at offset {idx}. Expected `{replacement}` but got `{actual}`")
+                if atom is not None and actual != atom:
+                    raise ValueError(f"Diffs don't match at offset {idx}. Expected `{atom}` but got `{actual}`")
             elif opcode == _DiffOpcode.REPLACE:
-                atoms[idx] = replacement
+                atoms[idx] = atom
             elif opcode == _DiffOpcode.INSERT:
-                atoms[idx:idx] = replacement
+                atoms.insert(idx, atom)
             elif opcode == _DiffOpcode.DELETE:
                 del atoms[idx : idx + 1]
             else:
@@ -430,9 +437,8 @@ class List(FullElement):
     def apply(self, other: DiffElement) -> FullElement:
         if not isinstance(other, ListDiff):
             raise TypeError(f"{type(self)}s can only be applied with ListDiff. Got {type(other)}")
-        self_atoms = [atom.encode() for atom in self._atoms]
-        new_atoms = self._apply_opcodes(self_atoms, other.diff)
-        return self.__class__([Atom.decode(atom) for atom in new_atoms])
+        new_atoms = self._apply_opcodes(self._atoms, other.diff)
+        return self.__class__(atoms=new_atoms)
 
     def __getitem__(self, idx: int) -> Atom:
         return self._atoms[idx]
@@ -498,11 +504,6 @@ if __name__ == "__main__":
     assert f"{diffed}" == "B"
     applied = atomA.apply(diffed)
     assert f"{applied}" == "B"
-    raw = Atom("back\\slash\nnew line")
-    encoded = raw.encode()
-    decoded = Atom.decode(encoded)
-    assert encoded == "back\\\\slash\\nnew line"
-    assert raw == decoded
 
     setA = Set(set([Atom(v) for v in ["a", "both"]]))
     setB = Set(set([Atom(v) for v in ["b", "both"]]))
