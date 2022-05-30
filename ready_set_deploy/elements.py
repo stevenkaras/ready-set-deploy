@@ -334,13 +334,14 @@ class _GenericMapDiff(DiffElement, Generic[_F, _D]):
 
 
 def generate_map_type(name: str, full_type: Type[_F], diff_type: Type[_D]) -> tuple[Type[_GenericMap[_F, _D]], Type[_GenericMapDiff[_F, _D]]]:
+    full_type, diff_type  # noqa
     types: list[Type] = []
     full = type(name, (_GenericMap,), {
-        "diff_type": classmethod(lambda cls: types[1])
+        "diff_type": classmethod(lambda _: types[1])
     })
     types.append(full)
     diff = type(f"{name}Diff", (_GenericMapDiff,), {
-        "full_type": classmethod(lambda cls: types[0])
+        "full_type": classmethod(lambda _: types[0])
     })
     types.append(diff)
     return full, diff
