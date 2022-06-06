@@ -1,7 +1,7 @@
 import unittest
-from typing import cast, Type
+from typing import cast
 
-from ready_set_deploy.elements import Atom, Set, SetDiff, Map, MultiMap, List, _GenericMap, MapDiff, _GenericMapDiff, DiffElement, FullElement, generate_map_type
+from ready_set_deploy.elements import Atom, AtomDiff, DiffElement, FullElement, Set, SetDiff, Map, MultiMap, List, MapDiff, generate_map_type
 
 
 class TestAtom(unittest.TestCase):
@@ -19,6 +19,19 @@ class TestAtom(unittest.TestCase):
         applied = atomA.apply(diffed)
         assert f"{applied}" == "B"
 
+    def test_serialization(self):
+        atomA = Atom("foo")
+        atomB = Atom("foo")
+        diffed = atomA.diff(atomB)
+
+        serialized = atomA.to_primitive()
+        roundtripped = FullElement.from_primitive(serialized)
+        assert atomA == roundtripped
+
+        serialized = diffed.to_primitive()
+        roundtripped = DiffElement.from_primitive(serialized)
+        assert diffed == roundtripped
+
 
 class TestSet(unittest.TestCase):
     def test_copy(self):
@@ -30,10 +43,23 @@ class TestSet(unittest.TestCase):
         setA = Set(set([Atom(v) for v in ["a", "both"]]))
         setB = Set(set([Atom(v) for v in ["b", "both"]]))
         diffed = cast(SetDiff, setA.diff(setB))
-        assert diffed.to_add == set([Atom("b")])
-        assert diffed.to_remove == set([Atom("a")])
+        assert diffed.to_add == set([AtomDiff("b")])
+        assert diffed.to_remove == set([AtomDiff("a")])
         applied = setA.apply(diffed)
         assert applied == setB
+
+    def test_serialization(self):
+        setA = Set(set([Atom(v) for v in ["a", "both"]]))
+        setB = Set(set([Atom(v) for v in ["b", "both"]]))
+        diffed = cast(SetDiff, setA.diff(setB))
+
+        serialized = setA.to_primitive()
+        roundtripped = FullElement.from_primitive(serialized)
+        assert setA == roundtripped
+
+        serialized = diffed.to_primitive()
+        roundtripped = DiffElement.from_primitive(serialized)
+        assert diffed == roundtripped
 
 
 class TestMap(unittest.TestCase):
@@ -50,6 +76,21 @@ class TestMap(unittest.TestCase):
         diffed = mapA.diff(mapB)
         applied = mapA.apply(diffed)
         assert applied == mapB
+
+    def test_serialization(self):
+        mapA = Map({Atom(k): Atom(k) for k in ["a", "unchanged", "changed"]})
+        mapBdict = {Atom(k): Atom(k) for k in ["b", "unchanged", "changed"]}
+        mapBdict[Atom("changed")] = Atom("changedB")
+        mapB = Map(mapBdict)
+        diffed = cast(MapDiff, mapA.diff(mapB))
+
+        serialized = mapA.to_primitive()
+        roundtripped = FullElement.from_primitive(serialized)
+        assert mapA == roundtripped
+
+        serialized = diffed.to_primitive()
+        roundtripped = cast(MapDiff, DiffElement.from_primitive(serialized))
+        assert diffed == roundtripped
 
 
 class TestMultiMap(unittest.TestCase):
@@ -97,36 +138,56 @@ class TestComplexMap(unittest.TestCase):
     def test_map_of_maps(self):
         NestedMap, _ = generate_map_type("NestedMap", Map, MapDiff)
 
-        optsA = NestedMap({
-            Atom("a"): Map({
-                Atom("name"): Atom("a"),
-            }),
-            Atom("unchanged"): Map({
-                Atom("name"): Atom("unchanged"),
-            }),
-            Atom("changed"): Map({
-                Atom("name"): Atom("changed"),
-            }),
-            Atom("nested"): Map({
-                Atom("name"): Atom("nested"),
-                Atom("prefix"): Atom("a"),
-            }),
-        })
-        optsB = NestedMap({
-            Atom("b"): Map({
-                Atom("name"): Atom("b"),
-            }),
-            Atom("unchanged"): Map({
-                Atom("name"): Atom("unchanged"),
-            }),
-            Atom("changed"): Map({
-                Atom("name"): Atom("changedB"),
-            }),
-            Atom("nested"): Map({
-                Atom("name"): Atom("nested"),
-                Atom("prefix"): Atom("b"),
-            }),
-        })
+        optsA = NestedMap(
+            {
+                Atom("a"): Map(
+                    {
+                        Atom("name"): Atom("a"),
+                    }
+                ),
+                Atom("unchanged"): Map(
+                    {
+                        Atom("name"): Atom("unchanged"),
+                    }
+                ),
+                Atom("changed"): Map(
+                    {
+                        Atom("name"): Atom("changed"),
+                    }
+                ),
+                Atom("nested"): Map(
+                    {
+                        Atom("name"): Atom("nested"),
+                        Atom("prefix"): Atom("a"),
+                    }
+                ),
+            }
+        )
+        optsB = NestedMap(
+            {
+                Atom("b"): Map(
+                    {
+                        Atom("name"): Atom("b"),
+                    }
+                ),
+                Atom("unchanged"): Map(
+                    {
+                        Atom("name"): Atom("unchanged"),
+                    }
+                ),
+                Atom("changed"): Map(
+                    {
+                        Atom("name"): Atom("changedB"),
+                    }
+                ),
+                Atom("nested"): Map(
+                    {
+                        Atom("name"): Atom("nested"),
+                        Atom("prefix"): Atom("b"),
+                    }
+                ),
+            }
+        )
 
         diffed = optsA.diff(optsB)
         applied = optsA.apply(diffed)
@@ -145,6 +206,19 @@ class TestList(unittest.TestCase):
         diffed = listA.diff(listB)
         applied = listA.apply(diffed)
         assert applied == listB, f"{applied=} {listB=}"
+
+    def test_serialization(self):
+        listA = List([Atom(v) for v in "a b c d e f g h j k l m n o p".split()])
+        listB = List([Atom(v) for v in "a b d e f g h i j k l m q o p".split()])
+        diffed = listA.diff(listB)
+
+        serialized = listA.to_primitive()
+        roundtripped = FullElement.from_primitive(serialized)
+        assert listA == roundtripped
+
+        serialized = diffed.to_primitive()
+        roundtripped = DiffElement.from_primitive(serialized)
+        assert diffed == roundtripped
 
 
 if __name__ == "__main__":
