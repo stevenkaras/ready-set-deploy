@@ -1,43 +1,46 @@
 import dataclasses
-from typing import Generic, Iterable, cast, TypeVar
-from ready_set_deploy import components
+from typing import Iterable
 
 from ready_set_deploy.components import Component
-from ready_set_deploy.elements import AtomDiff, DiffElement, FullElement
+from ready_set_deploy.elements import AtomDiff
 
 
 @dataclasses.dataclass
 class System:
     components: list[Component] = dataclasses.field(default_factory=list)
 
-    def components_by_dependency(self):
+    def to_primitive(self) -> dict:
         return {
-            component.dependency_key: component
-            for component in self.components
+            "components": [component.to_primitive() for component in self.components],
+            "version": "2",
+            "is_diff": self.is_diff(),
         }
 
-    def is_partial(self) -> bool:
-        return all(component.is_partial() for component in self.components)
+    @classmethod
+    def from_primitive(cls, primitive: dict) -> "System":
+        return cls(components=[Component.from_primitive(component, is_diff=primitive["is_diff"]) for component in primitive["components"]])
+
+    def components_by_dependency(self):
+        return {component.dependency_key: component for component in self.components}
+
+    def is_diff(self) -> bool:
+        return all(component.is_diff() for component in self.components)
 
     def is_full(self) -> bool:
         return all(component.is_full() for component in self.components)
 
     def is_valid(self) -> bool:
         components = self.components_by_dependency()
-        return all(component.is_valid() for component in self.components) and (self.is_partial() ^ self.is_full()) and all(
-            dependency in components
-            for component in self.components
-            for dependency in component.dependencies
+        return (
+            all(component.is_valid() for component in self.components)
+            and (self.is_diff() ^ self.is_full())
+            and all(dependency in components for component in self.components for dependency in component.dependencies)
         )
 
     def _toposort_components(self) -> Iterable[Component]:
         components = self.components_by_dependency()
         while components:
-            unblocked = [
-                component
-                for component in components.values()
-                if all(dependency not in components for dependency in component.dependencies)
-            ]
+            unblocked = [component for component in components.values() if all(dependency not in components for dependency in component.dependencies)]
             if not unblocked:
                 raise ValueError("Circular dependency in system - invalid state")
             for component in unblocked:
@@ -52,8 +55,8 @@ class System:
 
     def diff(self, other: "System") -> "System":
         self._validate_compatible(other)
-        if self.is_partial() or other.is_partial():
-            raise ValueError(f"Cannot diff partial systems")
+        if self.is_diff() or other.is_diff():
+            raise ValueError(f"Cannot diff diff-systems")
 
         self_components = self.components_by_dependency()
         other_components = other.components_by_dependency()
@@ -63,7 +66,7 @@ class System:
             for component_key in other_components.keys() - self_components.keys()
             for component in (other_components[component_key],)
         }
-        # use a well known compnoent to indicate it should be removed (and add a single diff element to indicate it's a partial component)
+        # use a well known compnoent to indicate it should be removed (and add a single diff element to indicate it's a diff component)
         components_to_remove = {
             component_key: Component(name="component.remove", dependencies=[], qualifier=(component.name, *component.qualifier), elements={"_": AtomDiff("")})
             for component_key in self_components.keys() - other_components.keys()
@@ -84,17 +87,15 @@ class System:
 
     def apply(self, other: "System") -> "System":
         self._validate_compatible(other)
-        if self.is_partial() or other.is_full():
-            raise ValueError(f"Cannot only apply partial components to full components")
+        if self.is_diff() or other.is_full():
+            raise ValueError(f"Cannot only apply diff components to full components")
 
         self_components = self.components_by_dependency()
         other_components = other.components_by_dependency()
 
-        components_to_remove = set([
-            (component.qualifier[0], component.qualifier[1:])
-            for _, component in other_components.items()
-            if component.name == "component.remove"
-        ])
+        components_to_remove = set(
+            [(component.qualifier[0], component.qualifier[1:]) for _, component in other_components.items() if component.name == "component.remove"]
+        )
         new_components = {}
         for key, component in self_components.items():
             if key in components_to_remove:
@@ -127,17 +128,21 @@ class System:
 if __name__ == "__main__":
     from ready_set_deploy.elements import Atom
 
-    systemA = System(components=[
-        Component(name="a", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")}),
-        Component(name="unchanged", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")}),
-        Component(name="changed", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")}),
-    ])
+    systemA = System(
+        components=[
+            Component(name="a", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")}),
+            Component(name="unchanged", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")}),
+            Component(name="changed", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")}),
+        ]
+    )
     assert systemA.is_valid()
-    systemB = System(components=[
-        Component(name="unchanged", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")}),
-        Component(name="changed", dependencies=[], qualifier=(), elements={"foo": Atom("barbaz")}),
-        Component(name="b", dependencies=[], qualifier=(), elements={"foo": Atom("barbaz")}),
-    ])
+    systemB = System(
+        components=[
+            Component(name="unchanged", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")}),
+            Component(name="changed", dependencies=[], qualifier=(), elements={"foo": Atom("barbaz")}),
+            Component(name="b", dependencies=[], qualifier=(), elements={"foo": Atom("barbaz")}),
+        ]
+    )
     assert systemB.is_valid()
     diffed = systemA.diff(systemB)
     applied = systemA.apply(diffed)
