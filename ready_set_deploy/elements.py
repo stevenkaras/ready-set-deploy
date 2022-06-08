@@ -676,62 +676,22 @@ class ListDiff(DiffElement[List]):
     def __repr__(self) -> str:
         return str(self)
 
+if __name__ == '__main__':
+    from typing import Iterable
+    import pathlib
+    def find_test_files(filename: str) -> Iterable[pathlib.Path]:
+        file = pathlib.Path(filename)
+        pattern = f"test_{file.stem}.py"
+        root = file.parent
+        while root.parent != root:
+            testdirs = [child for child in root.iterdir() if child.is_dir() and child.name in ("test", "tests")]
+            for testdir in testdirs:
+                yield from testdir.rglob(pattern)
 
-if __name__ == "__main__":
-    atomA = Atom("A")
-    atomB = Atom("B")
-    assert f"{atomA} {atomB}" == "A B"
-    diffed = atomA.diff(atomB)
-    assert f"{diffed}" == "B"
-    applied = atomA.apply(diffed)
-    assert f"{applied}" == "B"
+            root = root.parent
 
-    setA = Set(set([Atom(v) for v in ["a", "both"]]))
-    setB = Set(set([Atom(v) for v in ["b", "both"]]))
-    print(f"{setA} {setB}")  # {both, a} {both, b}
-    diffed = setA.diff(setB)
-    print(f"{diffed}")  # (+{b} -{a})
-    applied = setA.apply(diffed)
-    print(f"{applied}")  # {both, b}
-
-    mapA = Map({Atom(k): Atom(k) for k in ["a", "unchanged", "changed"]})
-    mapBdict = {Atom(k): Atom(k) for k in ["b", "unchanged", "changed"]}
-    mapBdict[Atom("changed")] = Atom("changedB")
-    mapB = Map(mapBdict)
-    print(f"{mapA} {mapB}")  # {a: a, unchanged: unchanged, changed: changed} {b: b, unchanged: unchanged, changed: changedB}
-    diffed = mapA.diff(mapB)
-    print(f"{diffed}")  # (+[(b, b)] ~[(changed, changedB)] -{a})
-    applied = mapA.apply(diffed)
-    print(f"{applied}")  # {unchanged: unchanged, changed: changedB, b: b}
-
-    mmapA = MultiMap(
-        {
-            Atom(k): Set(set(Atom(e) for e in v))
-            for k, v in {
-                "a": ["a"],
-                "both": ["both"],
-                "changed": ["a", "both"],
-            }.items()
-        }
-    )
-    mmapB = MultiMap(
-        {
-            Atom(k): Set(set(Atom(e) for e in v))
-            for k, v in {
-                "b": ["b"],
-                "both": ["both"],
-                "changed": ["b", "both"],
-            }.items()
-        }
-    )
-    print(f"{mmapA} {mmapB}")
-    diffed = mmapA.diff(mmapB)
-    print(f"{diffed}")
-    applied = mmapA.apply(diffed)
-    print(f"{applied}")
-
-    listA = List([Atom(v) for v in "a b c d e f g h j k l m n o p".split()])
-    listB = List([Atom(v) for v in "a b d e f g h i j k l m q o p".split()])
-    diffed = listA.diff(listB)
-    applied = listA.apply(diffed)
-    assert applied == listB, f"{applied=} {listB=}"
+    import unittest
+    for testfile in find_test_files(__file__):
+        tests = unittest.defaultTestLoader.discover(str(testfile.parent), pattern=testfile.name)
+        runner = unittest.TextTestRunner()
+        results = runner.run(tests)

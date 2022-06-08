@@ -129,21 +129,22 @@ class Component(Generic[_E]):
         return str(self)
 
 
-if __name__ == "__main__":
-    from ready_set_deploy.elements import Atom
+if __name__ == '__main__':
+    from typing import Iterable
+    import pathlib
+    def find_test_files(filename: str) -> Iterable[pathlib.Path]:
+        file = pathlib.Path(filename)
+        pattern = f"test_{file.stem}.py"
+        root = file.parent
+        while root.parent != root:
+            testdirs = [child for child in root.iterdir() if child.is_dir() and child.name in ("test", "tests")]
+            for testdir in testdirs:
+                yield from testdir.rglob(pattern)
 
-    empty = Component(name="empty", dependencies=[], qualifier=(), elements={})
-    assert empty.is_diff()
-    assert empty.is_full()
-    assert empty.is_valid()
+            root = root.parent
 
-    cfoo1 = Component(name="foo", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")})
-    cfoo2 = Component(name="foo", dependencies=[], qualifier=(), elements={"foo": Atom("foobaz")})
-    diffed = cfoo1.diff(cfoo2)
-    applied = cfoo1.apply(diffed)
-    assert applied == cfoo2
-
-    cfoo1 = Component(name="foo", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")})
-    diffed = cfoo1.zerodiff()
-    applied = diffed.zeroapply()
-    assert applied == cfoo1
+    import unittest
+    for testfile in find_test_files(__file__):
+        tests = unittest.defaultTestLoader.discover(str(testfile.parent), pattern=testfile.name)
+        runner = unittest.TextTestRunner()
+        results = runner.run(tests)

@@ -125,25 +125,22 @@ class System:
         return str(self)
 
 
-if __name__ == "__main__":
-    from ready_set_deploy.elements import Atom
+if __name__ == '__main__':
+    from typing import Iterable
+    import pathlib
+    def find_test_files(filename: str) -> Iterable[pathlib.Path]:
+        file = pathlib.Path(filename)
+        pattern = f"test_{file.stem}.py"
+        root = file.parent
+        while root.parent != root:
+            testdirs = [child for child in root.iterdir() if child.is_dir() and child.name in ("test", "tests")]
+            for testdir in testdirs:
+                yield from testdir.rglob(pattern)
 
-    systemA = System(
-        components=[
-            Component(name="a", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")}),
-            Component(name="unchanged", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")}),
-            Component(name="changed", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")}),
-        ]
-    )
-    assert systemA.is_valid()
-    systemB = System(
-        components=[
-            Component(name="unchanged", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")}),
-            Component(name="changed", dependencies=[], qualifier=(), elements={"foo": Atom("barbaz")}),
-            Component(name="b", dependencies=[], qualifier=(), elements={"foo": Atom("barbaz")}),
-        ]
-    )
-    assert systemB.is_valid()
-    diffed = systemA.diff(systemB)
-    applied = systemA.apply(diffed)
-    assert applied == systemB
+            root = root.parent
+
+    import unittest
+    for testfile in find_test_files(__file__):
+        tests = unittest.defaultTestLoader.discover(str(testfile.parent), pattern=testfile.name)
+        runner = unittest.TextTestRunner()
+        results = runner.run(tests)
