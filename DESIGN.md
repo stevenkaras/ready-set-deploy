@@ -6,22 +6,25 @@ This document aims to lay out the design philosophy and motivations behind RSD.
 
 Other systems take an imperative approach towards defining system state.
 Even those that ostensibly use declarative state don't really, and rely on idempotent actions instead.
-Moreover, all existing solutions rely on a centralized controller and don't allow introspection when the network is down.
+This means that dependencies between actions aren't resolved automatically and instead left as an exercise to the end user to order properly.
+Moreover, all existing solutions that I've seen don't allow inspecting the desired state when the network is down.
 
 ## Driving tenets
 
-- Always do the absolute minimum amount of actual work needed to deploy a system
+- Minimize the amount of work done to deploy a system
 - Decouple defining the desired state from the actual execution
-- Provide tooling to help bootstrap deployment definitions easily
-- Provide a robust framework for quickly building new providers
-- Define the desired state as small as possible, but operate on as complete a state as possible
-- RSD is not a front-end or a back-end. It's the plumbing in the middle.
+- Provide tooling to bootstrap baseline system state easily
+- Provide a robust framework for building new providers quickly
+- RSD is not a front-end or a back-end. It's the plumbing in the middle
 
-### Why do the absolute minimum?
+### Why minimize work? What does that even mean?
 
-By the absolute minimum, it means that RSD should avoid emitting commands unless they will have a known effect.
-Many existing systems will go to great lengths to determine idempotent commands to mutate system state.
-This should minimize the amount of time it takes to actually execute a deployment.
+Some systems will bend over backwards to find idempotent commands that won't actually change anything in a system that's already in the desired state.
+However, they still need to be executed, tracked, results gathered, and often interpreted as having done something or not.
+This encourages small playbooks, leaving the rest of the system to be undefined which can result in state drift.
+
+By taking the diff between the current and desired state, RSD can determine exactly what needs to change.
+Moreover, by defining dependencies between components, it's possible to perform many actions in parallel, further speeding up deployment to a host.
 
 ### Why decouple execution from defining the desired state?
 
@@ -35,15 +38,20 @@ It also opens the possibility for impressively simple or complex systems to be b
 - tracking the current state of all servers in a central repo
 - running deploys over ssh from a CI/CD pipeline
 
-### What sort of tooling is needed to bootstrap definitions?
+### Why is bootstrapping baseline state important?
 
-This means that providers must be capable of gathering system state (potentially incrementally if it helps them execute faster).
-Bidirectional compilers should be able to convert commands to and from other systems such as ansible.
+I want to see RSD in widespread use.
+The best way to convince people to use your system is to reduce barriers to entry and egress (make it easy to start or stop using).
+By reducing the initial bootstrapping as much as possible, it's easy to convince users they should try it out.
+By providing easy to understand scripts that gather typical deployment patterns, it's possible to try out RSD and show off how it can be useful.
 
-### What sort of framework is needed to build providers quickly?
+Ideally, it will be possible to target RSD as a virtual execution target in ansible, and render an RSD diff as an ansible role.
+This makes it much easier to integrate RSD into existing workflows and even augment them to allow for offline introspection or efficient execution.
 
-Boilerplate logic is a pain - no one wants to write the set logic that determines the diff between lists of installed packages more than once.
-RSD should allow providers to be built in whatever language/framework is easiest for them to work with, invoking them through a configurable module system.
+### Why is it building new providers so important?
+
+No matter which providers come baked in, there will always be another package manager, another abstraction, another something that works every so slightly differently.
+The expectation is that most non-trivial systems will want to implement their own custom providers that handle their organizational idiosyncrasies.
 
 ### What does it mean that RSD is not a front end?
 
@@ -55,3 +63,10 @@ RSD can then combine with a baseline configuration to determine the full desired
 
 RSD only includes the most minimal renderer possible for applying a partial state.
 RSD doesn't execute any commands, and will never learn how to. If you want to execute commands, you will need to pipe it to bash or ssh or somesuch.
+
+## Typed vs dynamic sections of code
+
+The core theory for RSD is well defined and can be implemented from the spec.
+The need to build providers quickly runs counterpoint to that though - it's a lot easier to write untyped code than typed.
+To balance the safety we gain from strict typing with the developer productivity gained from allowing untyped code it's important to allow a trap door to move between the two.
+This almost by definition should be separate from the serialization format, as some of the core abstractions (e.g. unordered sets of elements) do not have good representations in most serialization formats.
