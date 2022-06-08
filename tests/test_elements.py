@@ -1,101 +1,154 @@
 import unittest
 from typing import cast
 
-from ready_set_deploy.elements import Atom, AtomDiff, DiffElement, FullElement, Set, SetDiff, Map, MultiMap, List, MapDiff, generate_map_type
+from ready_set_deploy.elements import Atom, AtomDiff, DiffElement, FullElement, Set, SetDiff, Map, MapDiff, List
 
 
-class TestAtom(unittest.TestCase):
-    def test_copy(self):
-        atom = Atom("foo")
-        copied = atom.copy()
-        assert copied == atom
+class ElementTest(unittest.TestCase):
+    def _test_copy(self, element):
+        copied = element.copy()
+        assert copied == element
 
-    def test_sanity(self):
-        atomA = Atom("A")
-        atomB = Atom("B")
-        assert f"{atomA} {atomB}" == "A B"
-        diffed = atomA.diff(atomB)
-        assert f"{diffed}" == "B"
-        applied = atomA.apply(diffed)
-        assert f"{applied}" == "B"
+    def _test_diff_apply(self, elementA, elementB):
+        diffed = elementA.diff(elementB)
+        applied = elementA.apply(diffed)
+        assert applied == elementB
 
-    def test_serialization(self):
-        atomA = Atom("foo")
-        atomB = Atom("foo")
-        diffed = atomA.diff(atomB)
-
-        serialized = atomA.to_primitive()
+    def _test_serialization(self, element):
+        serialized = element.to_primitive()
         roundtripped = FullElement.from_primitive(serialized)
-        assert atomA == roundtripped
+        assert element == roundtripped
 
-        serialized = diffed.to_primitive()
-        roundtripped = DiffElement.from_primitive(serialized)
-        assert diffed == roundtripped
-
-
-class TestSet(unittest.TestCase):
-    def test_copy(self):
-        setA = Set(set([Atom(v) for v in ["a", "both"]]))
-        copied = setA.copy()
-        assert copied == setA
-
-    def test_sanity(self):
-        setA = Set(set([Atom(v) for v in ["a", "both"]]))
-        setB = Set(set([Atom(v) for v in ["b", "both"]]))
-        diffed = cast(SetDiff, setA.diff(setB))
-        assert diffed.to_add == set([AtomDiff("b")])
-        assert diffed.to_remove == set([AtomDiff("a")])
-        applied = setA.apply(diffed)
-        assert applied == setB
-
-    def test_serialization(self):
-        setA = Set(set([Atom(v) for v in ["a", "both"]]))
-        setB = Set(set([Atom(v) for v in ["b", "both"]]))
-        diffed = cast(SetDiff, setA.diff(setB))
-
-        serialized = setA.to_primitive()
-        roundtripped = FullElement.from_primitive(serialized)
-        assert setA == roundtripped
-
-        serialized = diffed.to_primitive()
-        roundtripped = DiffElement.from_primitive(serialized)
-        assert diffed == roundtripped
-
-
-class TestMap(unittest.TestCase):
-    def test_copy(self):
-        mapA = Map({Atom(k): Atom(k) for k in ["a", "unchanged", "changed"]})
-        copied = mapA.copy()
-        assert copied == mapA
-
-    def test_sanity(self):
-        mapA = Map({Atom(k): Atom(k) for k in ["a", "unchanged", "changed"]})
-        mapBdict = {Atom(k): Atom(k) for k in ["b", "unchanged", "changed"]}
-        mapBdict[Atom("changed")] = Atom("changedB")
-        mapB = Map(mapBdict)
-        diffed = mapA.diff(mapB)
-        applied = mapA.apply(diffed)
-        assert applied == mapB
-
-    def test_serialization(self):
-        mapA = Map({Atom(k): Atom(k) for k in ["a", "unchanged", "changed"]})
-        mapBdict = {Atom(k): Atom(k) for k in ["b", "unchanged", "changed"]}
-        mapBdict[Atom("changed")] = Atom("changedB")
-        mapB = Map(mapBdict)
-        diffed = cast(MapDiff, mapA.diff(mapB))
-
-        serialized = mapA.to_primitive()
-        roundtripped = FullElement.from_primitive(serialized)
-        assert mapA == roundtripped
-
+    def _test_serialization_diff(self, elementA, elementB):
+        diffed = elementA.diff(elementB)
         serialized = diffed.to_primitive()
         roundtripped = cast(MapDiff, DiffElement.from_primitive(serialized))
         assert diffed == roundtripped
 
+    def _run_standard_tests(self, subtype, elementA, elementB):
+        with self.subTest(f"{subtype} copy"):
+            self._test_copy(elementA)
 
-class TestMultiMap(unittest.TestCase):
-    def test_copy(self):
-        mmapA = MultiMap(
+        with self.subTest(f"{subtype} diff apply"):
+            self._test_diff_apply(elementA, elementB)
+
+        with self.subTest(f"{subtype} serialization"):
+            self._test_serialization(elementA)
+
+        with self.subTest(f"{subtype} serialization diff"):
+            self._test_serialization_diff(elementA, elementB)
+
+
+class TestAtom(ElementTest):
+    def _build_atoms(self):
+        atomA = Atom("A")
+        atomB = Atom("B")
+
+        return atomA, atomB
+
+    def test_atoms(self):
+        atomA, atomB = self._build_atoms()
+        self._run_standard_tests("Atom", atomA, atomB)
+
+
+class TestSet(ElementTest):
+    def test_atom_set(self):
+        AtomSet = Set[Atom, AtomDiff]
+        setA = AtomSet(set([Atom(v) for v in ["a", "both"]]))
+        setB = AtomSet(set([Atom(v) for v in ["b", "both"]]))
+
+        self._run_standard_tests("Set[Atom]", setA, setB)
+
+    def test_atom_set_set(self):
+        AtomSetSet = Set[Set[Atom, AtomDiff], SetDiff[Atom, AtomDiff]]
+        AtomSet = Set[Atom, AtomDiff]
+        setA = AtomSetSet(set([
+            AtomSet(set([
+                Atom(v) for v in ["shared"]
+            ])),
+            AtomSet(set([
+                Atom(v) for v in ["a"]
+            ])),
+            AtomSet(set([
+                Atom(v) for v in ["a", "changed"]
+            ])),
+        ]))
+        setB = AtomSetSet(set([
+            AtomSet(set([
+                Atom(v) for v in ["shared"]
+            ])),
+            AtomSet(set([
+                Atom(v) for v in ["b"]
+            ])),
+            AtomSet(set([
+                Atom(v) for v in ["b", "changed"]
+            ])),
+        ]))
+
+        self._run_standard_tests("Set[Set[Atom]]", setA, setB)
+
+    def test_atom_map_set(self):
+        AtomMapSet = Set[Map[Atom, AtomDiff], MapDiff[Atom, AtomDiff]]
+        AtomMap = Map[Atom, AtomDiff]
+        setA = AtomMapSet(set([
+            AtomMap({
+                Atom(k): Atom(v)
+                for k, v in {
+                    "a": "a",
+                }.items()
+            }),
+            AtomMap({
+                Atom(k): Atom(v)
+                for k, v in {
+                    "shared": "shared",
+                }.items()
+            }),
+            AtomMap({
+                Atom(k): Atom(v)
+                for k, v in {
+                    "unchanged": "unchanged",
+                    "changed": "a",
+                }.items()
+            }),
+        ]))
+        setB = AtomMapSet(set([
+            AtomMap({
+                Atom(k): Atom(v)
+                for k, v in {
+                    "b": "b",
+                }.items()
+            }),
+            AtomMap({
+                Atom(k): Atom(v)
+                for k, v in {
+                    "shared": "shared",
+                }.items()
+            }),
+            AtomMap({
+                Atom(k): Atom(v)
+                for k, v in {
+                    "unchanged": "unchanged",
+                    "changed": "b",
+                }.items()
+            }),
+        ]))
+
+        self._run_standard_tests("Set[Map[Atom]]", setA, setB)
+
+
+class TestMap(ElementTest):
+    def test_atom_map(self):
+        AtomMap = Map[Atom, AtomDiff]
+        mapA = AtomMap({Atom(k): Atom(k) for k in ["a", "unchanged", "changed"]})
+        mapBdict = {Atom(k): Atom(k) for k in ["b", "unchanged", "changed"]}
+        mapBdict[Atom("changed")] = Atom("changedB")
+        mapB = AtomMap(mapBdict)
+
+        self._run_standard_tests("Map[Atom]", mapA, mapB)
+
+    def test_atom_set_map(self):
+        AtomSetMap = Map[Set[Atom, AtomDiff], SetDiff[Atom, AtomDiff]]
+        mapA = AtomSetMap(
             {
                 Atom(k): Set(set(Atom(e) for e in v))
                 for k, v in {
@@ -105,21 +158,7 @@ class TestMultiMap(unittest.TestCase):
                 }.items()
             }
         )
-        copied = mmapA.copy()
-        assert copied == mmapA
-
-    def test_sanity(self):
-        mmapA = MultiMap(
-            {
-                Atom(k): Set(set(Atom(e) for e in v))
-                for k, v in {
-                    "a": ["a"],
-                    "both": ["both"],
-                    "changed": ["a", "both"],
-                }.items()
-            }
-        )
-        mmapB = MultiMap(
+        mapB = AtomSetMap(
             {
                 Atom(k): Set(set(Atom(e) for e in v))
                 for k, v in {
@@ -129,16 +168,13 @@ class TestMultiMap(unittest.TestCase):
                 }.items()
             }
         )
-        diffed = mmapA.diff(mmapB)
-        applied = mmapA.apply(diffed)
-        assert applied == mmapB
 
+        self._run_standard_tests("Map[Set[Atom]]", mapA, mapB)
 
-class TestComplexMap(unittest.TestCase):
-    def test_map_of_maps(self):
-        NestedMap, _ = generate_map_type("NestedMap", Map, MapDiff)
+    def test_atom_map_map(self):
+        NestedMap = Map[Map[Atom, AtomDiff], MapDiff[Atom, AtomDiff]]
 
-        optsA = NestedMap(
+        mapA = NestedMap(
             {
                 Atom("a"): Map(
                     {
@@ -163,7 +199,7 @@ class TestComplexMap(unittest.TestCase):
                 ),
             }
         )
-        optsB = NestedMap(
+        mapB = NestedMap(
             {
                 Atom("b"): Map(
                     {
@@ -189,36 +225,15 @@ class TestComplexMap(unittest.TestCase):
             }
         )
 
-        diffed = optsA.diff(optsB)
-        applied = optsA.apply(diffed)
-        assert applied == optsB
+        self._run_standard_tests("Map[Map[Atom]]", mapA, mapB)
 
 
-class TestList(unittest.TestCase):
-    def test_copy(self):
-        listA = List([Atom(v) for v in "a b c d e f g h j k l m n o p".split()])
-        copied = listA.copy()
-        assert copied == listA
-
-    def test_sanity(self):
+class TestList(ElementTest):
+    def test_list(self):
         listA = List([Atom(v) for v in "a b c d e f g h j k l m n o p".split()])
         listB = List([Atom(v) for v in "a b d e f g h i j k l m q o p".split()])
-        diffed = listA.diff(listB)
-        applied = listA.apply(diffed)
-        assert applied == listB, f"{applied=} {listB=}"
 
-    def test_serialization(self):
-        listA = List([Atom(v) for v in "a b c d e f g h j k l m n o p".split()])
-        listB = List([Atom(v) for v in "a b d e f g h i j k l m q o p".split()])
-        diffed = listA.diff(listB)
-
-        serialized = listA.to_primitive()
-        roundtripped = FullElement.from_primitive(serialized)
-        assert listA == roundtripped
-
-        serialized = diffed.to_primitive()
-        roundtripped = DiffElement.from_primitive(serialized)
-        assert diffed == roundtripped
+        self._run_standard_tests("List", listA, listB)
 
 
 if __name__ == "__main__":
