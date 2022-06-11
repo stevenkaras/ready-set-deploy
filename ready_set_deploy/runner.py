@@ -2,6 +2,7 @@ import json
 import logging
 import subprocess
 from collections.abc import Iterable, Sequence
+from typing import Optional
 
 from more_itertools import chunked
 
@@ -12,8 +13,8 @@ class CommandRunner:
     def __init__(self):
         self.max_cli_params = 1024
 
-    def to_commands(self, command: list[str], params: Iterable[str] = []) -> Iterable[Sequence[str]]:
-        if not params:
+    def to_commands(self, command: list[str], params: Optional[Iterable[str]] = None) -> Iterable[Sequence[str]]:
+        if params is None:
             yield command
             return
 
