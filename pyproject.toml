@@ -32,3 +32,4 @@ max-complexity = 20
 
 [tool.mypy]
 ignore_missing_imports = true
+namespace_packages = true
