@@ -342,6 +342,9 @@ class SetDiff(DiffElement["Set[_F]"], Generic[_F]):
     def full_type(cls) -> type["Set"]:
         return Set
 
+    def __bool__(self) -> bool:
+        return bool(self.to_add) or bool(self.to_remove)
+
     def __hash__(self) -> int:
         h = 0
         for item in self.to_add:
@@ -509,6 +512,9 @@ class MapDiff(DiffElement[Map], Generic[_F, _D]):
     @classmethod
     def full_type(cls) -> type["Map"]:
         return Map
+
+    def __bool__(self) -> bool:
+        return bool(self.keys_to_remove) or bool(self.items_to_add) or bool(self.items_to_set)
 
     def __hash__(self) -> int:
         h = 0
@@ -680,6 +686,9 @@ class ListDiff(DiffElement[List]):
     @classmethod
     def full_type(cls) -> type[List]:
         return List
+
+    def __bool__(self) -> bool:
+        return bool(self.diff)
 
     def __hash__(self) -> int:
         return hash(self.diff)
