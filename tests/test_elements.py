@@ -12,18 +12,18 @@ class ElementTest(unittest.TestCase):
     def _test_diff_apply(self, elementA, elementB):
         diffed = elementA.diff(elementB)
         applied = elementA.apply(diffed)
-        assert applied == elementB
+        assert applied == elementB, f"Expected: {elementB!r} Actual: {applied!r}"
 
     def _test_serialization(self, element):
         serialized = element.to_primitive()
         roundtripped = FullElement.from_primitive(serialized)
-        assert element == roundtripped
+        assert element == roundtripped, f"Expected: {element!r} Actual: {roundtripped!r}"
 
     def _test_serialization_diff(self, elementA, elementB):
         diffed = elementA.diff(elementB)
         serialized = diffed.to_primitive()
         roundtripped = cast(MapDiff, DiffElement.from_primitive(serialized))
-        assert diffed == roundtripped
+        assert diffed == roundtripped, f"Expected: {diffed!r} Actual: {roundtripped!r}"
 
     def _run_standard_tests(self, subtype, elementA, elementB):
         with self.subTest(f"{subtype} copy"):
@@ -53,85 +53,101 @@ class TestAtom(ElementTest):
 
 class TestSet(ElementTest):
     def test_atom_set(self):
-        AtomSet = Set[Atom, AtomDiff]
+        AtomSet = Set[Atom]
         setA = AtomSet(set([Atom(v) for v in ["a", "both"]]))
         setB = AtomSet(set([Atom(v) for v in ["b", "both"]]))
 
         self._run_standard_tests("Set[Atom]", setA, setB)
 
     def test_atom_set_set(self):
-        AtomSetSet = Set[Set[Atom, AtomDiff], SetDiff[Atom, AtomDiff]]
-        AtomSet = Set[Atom, AtomDiff]
-        setA = AtomSetSet(set([
-            AtomSet(set([
-                Atom(v) for v in ["shared"]
-            ])),
-            AtomSet(set([
-                Atom(v) for v in ["a"]
-            ])),
-            AtomSet(set([
-                Atom(v) for v in ["a", "changed"]
-            ])),
-        ]))
-        setB = AtomSetSet(set([
-            AtomSet(set([
-                Atom(v) for v in ["shared"]
-            ])),
-            AtomSet(set([
-                Atom(v) for v in ["b"]
-            ])),
-            AtomSet(set([
-                Atom(v) for v in ["b", "changed"]
-            ])),
-        ]))
+        AtomSetSet = Set[Set[Atom]]
+        AtomSet = Set[Atom]
+        setA = AtomSetSet(
+            set(
+                [
+                    AtomSet(set([Atom(v) for v in ["shared"]])),
+                    AtomSet(set([Atom(v) for v in ["a"]])),
+                    AtomSet(set([Atom(v) for v in ["a", "changed"]])),
+                ]
+            )
+        )
+        setB = AtomSetSet(
+            set(
+                [
+                    AtomSet(set([Atom(v) for v in ["shared"]])),
+                    AtomSet(set([Atom(v) for v in ["b"]])),
+                    AtomSet(set([Atom(v) for v in ["b", "changed"]])),
+                ]
+            )
+        )
 
         self._run_standard_tests("Set[Set[Atom]]", setA, setB)
 
     def test_atom_map_set(self):
-        AtomMapSet = Set[Map[Atom, AtomDiff], MapDiff[Atom, AtomDiff]]
+        AtomMapSet = Set[Map[Atom, AtomDiff]]
         AtomMap = Map[Atom, AtomDiff]
-        setA = AtomMapSet(set([
-            AtomMap({
-                Atom(k): Atom(v)
-                for k, v in {
-                    "a": "a",
-                }.items()
-            }),
-            AtomMap({
-                Atom(k): Atom(v)
-                for k, v in {
-                    "shared": "shared",
-                }.items()
-            }),
-            AtomMap({
-                Atom(k): Atom(v)
-                for k, v in {
-                    "unchanged": "unchanged",
-                    "changed": "a",
-                }.items()
-            }),
-        ]))
-        setB = AtomMapSet(set([
-            AtomMap({
-                Atom(k): Atom(v)
-                for k, v in {
-                    "b": "b",
-                }.items()
-            }),
-            AtomMap({
-                Atom(k): Atom(v)
-                for k, v in {
-                    "shared": "shared",
-                }.items()
-            }),
-            AtomMap({
-                Atom(k): Atom(v)
-                for k, v in {
-                    "unchanged": "unchanged",
-                    "changed": "b",
-                }.items()
-            }),
-        ]))
+        setA = AtomMapSet(
+            set(
+                [
+                    AtomMap(
+                        {
+                            Atom(k): Atom(v)
+                            for k, v in {
+                                "a": "a",
+                            }.items()
+                        }
+                    ),
+                    AtomMap(
+                        {
+                            Atom(k): Atom(v)
+                            for k, v in {
+                                "shared": "shared",
+                            }.items()
+                        }
+                    ),
+                    AtomMap(
+                        {
+                            Atom(k): Atom(v)
+                            for k, v in {
+                                "unchanged": "unchanged",
+                                "changed": "a",
+                            }.items()
+                        }
+                    ),
+                ]
+            )
+        )
+        setB = AtomMapSet(
+            set(
+                [
+                    AtomMap(
+                        {
+                            Atom(k): Atom(v)
+                            for k, v in {
+                                "b": "b",
+                            }.items()
+                        }
+                    ),
+                    AtomMap(
+                        {
+                            Atom(k): Atom(v)
+                            for k, v in {
+                                "shared": "shared",
+                            }.items()
+                        }
+                    ),
+                    AtomMap(
+                        {
+                            Atom(k): Atom(v)
+                            for k, v in {
+                                "unchanged": "unchanged",
+                                "changed": "b",
+                            }.items()
+                        }
+                    ),
+                ]
+            )
+        )
 
         self._run_standard_tests("Set[Map[Atom]]", setA, setB)
 
@@ -147,7 +163,7 @@ class TestMap(ElementTest):
         self._run_standard_tests("Map[Atom]", mapA, mapB)
 
     def test_atom_set_map(self):
-        AtomSetMap = Map[Set[Atom, AtomDiff], SetDiff[Atom, AtomDiff]]
+        AtomSetMap = Map[Set[Atom], SetDiff[Atom]]
         mapA = AtomSetMap(
             {
                 Atom(k): Set(set(Atom(e) for e in v))

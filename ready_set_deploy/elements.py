@@ -225,7 +225,7 @@ class AtomDiff(DiffElement["Atom"]):
         return f'{self.__class__.__name__}("{self.value}")'
 
 
-class Set(FullElement["SetDiff[_F, _D]"], Generic[_F, _D]):
+class Set(FullElement["SetDiff[_F]"], Generic[_F]):
     """
     A set is an element representing an unordered collection of Atoms
     """
@@ -233,55 +233,55 @@ class Set(FullElement["SetDiff[_F, _D]"], Generic[_F, _D]):
     def __init__(self, items: set[_F]) -> None:
         self._items = items
 
-    def copy(self) -> "Set[_F, _D]":
+    def copy(self) -> "Set[_F]":
         return self.__class__(items=set(self._items))
 
     def to_primitive(self) -> Primitive:
         return ["set", *(item.to_primitive() for item in self._items)]
 
     @classmethod
-    def _from_primitive(cls, primitive: Primitive) -> "Set[_F, _D]":
+    def _from_primitive(cls, primitive: Primitive) -> "Set[_F]":
         primitive = cast(list[str], primitive)
         items = set([FullElement.from_primitive(item) for item in primitive])
         return cls(items=cast(set[_F], items))
 
     @classmethod
-    def zero(cls) -> "Set[_F, _D]":
+    def zero(cls) -> "Set[_F]":
         return cls(items=set())
 
     @classmethod
-    def diff_type(cls) -> type["SetDiff[_F, _D]"]:
+    def diff_type(cls) -> type["SetDiff[_F]"]:
         return SetDiff
 
-    def diff(self, other: "Set[_F, _D]") -> "SetDiff[_F, _D]":
+    def diff(self, other: "Set[_F]") -> "SetDiff[_F]":
         if not isinstance(other, type(self)):
             raise TypeError(f"{type(self)} are only diffable against other {type(self)}. Got {type(other)}")
         diff_type = self.diff_type()
 
-        to_add = set([item.zero().diff(item) for item in other._items - self._items])
-        to_remove = set([item.zero().diff(item) for item in self._items - other._items])
+        to_add = set(item for item in other._items - self._items)
+        to_remove = set(item for item in self._items - other._items)
 
         return diff_type(to_add=to_add, to_remove=to_remove)
 
-    def apply(self, other: "SetDiff[_F, _D]") -> "Set[_F, _D]":
+    def apply(self, other: "SetDiff[_F]") -> "Set[_F]":
         if not isinstance(other, self.diff_type()):
             raise TypeError(f"{type(self)}s can only be applied with SetDiff. Got {type(other)}")
         # other = cast(SetDiff, other)
 
-        items = self._items
-        items |= cast(set[_F], set([item.full_type().zero().apply(item) for item in other.to_add]))
-        items -= cast(set[_F], set([item.full_type().zero().apply(item) for item in other.to_remove]))
+        items = set(self._items)
+        items |= other.to_add
+        items -= other.to_remove
 
         return self.__class__(items=items)
 
-    def add(self, value: _F) -> "Set[_F, _D]":
+    def add(self, value: _F) -> "Set[_F]":
         """
         Add the given value to this set
         """
         self._items.add(value)
         return self
 
-    def remove(self, value: _F) -> "Set[_F, _D]":
+    def remove(self, value: _F) -> "Set[_F]":
         """
         Remove the given value from this set if present
         """
@@ -298,7 +298,10 @@ class Set(FullElement["SetDiff[_F, _D]"], Generic[_F, _D]):
         return item in self._items
 
     def __hash__(self) -> int:
-        return hash(self._items)
+        h = 0
+        for item in self._items:
+            h ^= hash(item)
+        return h
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Set):
@@ -310,11 +313,11 @@ class Set(FullElement["SetDiff[_F, _D]"], Generic[_F, _D]):
         return str(self._items)
 
     def __repr__(self) -> str:
-        return str(self)
+        return f"{self.__class__.__name__}({self._items!r})"
 
 
-class SetDiff(DiffElement["Set[_F, _D]"], Generic[_F, _D]):
-    def __init__(self, to_add: set[_D], to_remove: set[_D]) -> None:
+class SetDiff(DiffElement["Set[_F]"], Generic[_F]):
+    def __init__(self, to_add: set[_F], to_remove: set[_F]) -> None:
         self.to_add = to_add
         self.to_remove = to_remove
 
@@ -331,8 +334,8 @@ class SetDiff(DiffElement["Set[_F, _D]"], Generic[_F, _D]):
     @classmethod
     def _from_primitive(cls, primitive: Primitive) -> "SetDiff":
         primitive = cast(dict[str, list[str]], primitive)
-        to_add = cast(set[_D], set([DiffElement.from_primitive(atom) for atom in primitive["to_add"]]))
-        to_remove = cast(set[_D], set([DiffElement.from_primitive(atom) for atom in primitive["to_remove"]]))
+        to_add = cast(set[_F], set(FullElement.from_primitive(atom) for atom in primitive["to_add"]))
+        to_remove = cast(set[_F], set(FullElement.from_primitive(atom) for atom in primitive["to_remove"]))
         return cls(to_add=to_add, to_remove=to_remove)
 
     @classmethod
@@ -340,7 +343,13 @@ class SetDiff(DiffElement["Set[_F, _D]"], Generic[_F, _D]):
         return Set
 
     def __hash__(self) -> int:
-        return hash((self.to_add, self.to_remove))
+        h = 0
+        for item in self.to_add:
+            h ^= hash(item)
+        for item in self.to_remove:
+            h ^= -hash(item)
+
+        return h
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, SetDiff):
@@ -386,11 +395,11 @@ class Map(FullElement["MapDiff"], Generic[_F, _D]):
     def diff(self, other: "Map") -> "MapDiff":
         if not isinstance(other, type(self)):
             raise TypeError(f"{type(self)} are only diffable against other {type(self)}. Got {type(other)}")
-        keys_to_remove = list(set(self._map.keys()) - set(other._map.keys()))
-        raw_items_to_add = [(key, value.copy()) for key, value in other._map.items() if key not in self._map]
-        items_to_add = cast(list[tuple[Atom, _F]], raw_items_to_add)
-        raw_items_to_set = [(key, self._map[key].diff(value)) for key, value in other._map.items() if key in self._map and self._map[key] != value]
-        items_to_set = cast(list[tuple[Atom, _D]], raw_items_to_set)
+        keys_to_remove = set(self._map.keys()) - set(other._map.keys())
+        raw_items_to_add = set((key, value.copy()) for key, value in other._map.items() if key not in self._map)
+        items_to_add = cast(set[tuple[Atom, _F]], raw_items_to_add)
+        raw_items_to_set = set((key, self._map[key].diff(value)) for key, value in other._map.items() if key in self._map and self._map[key] != value)
+        items_to_set = cast(set[tuple[Atom, _D]], raw_items_to_set)
         diff_type = cast(type[MapDiff[_F, _D]], self.diff_type())
         return diff_type(keys_to_remove=keys_to_remove, items_to_add=items_to_add, items_to_set=items_to_set)
 
@@ -444,7 +453,10 @@ class Map(FullElement["MapDiff"], Generic[_F, _D]):
         return self._map.pop(key, default)
 
     def __hash__(self) -> int:
-        return hash(self._map)
+        h = 0
+        for key, value in self._map.items():
+            h ^= hash((key, hash(value)))
+        return h
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Map):
@@ -456,11 +468,11 @@ class Map(FullElement["MapDiff"], Generic[_F, _D]):
         return str(self._map)
 
     def __repr__(self) -> str:
-        return str(self)
+        return f"{self.__class__.__name__}({self._map!r})"
 
 
 class MapDiff(DiffElement[Map], Generic[_F, _D]):
-    def __init__(self, keys_to_remove: Iterable[Atom], items_to_add: Iterable[tuple[Atom, _F]], items_to_set: Iterable[tuple[Atom, _D]]) -> None:
+    def __init__(self, keys_to_remove: set[Atom], items_to_add: set[tuple[Atom, _F]], items_to_set: set[tuple[Atom, _D]]) -> None:
         self.keys_to_remove = keys_to_remove
         self.items_to_set = items_to_set
         self.items_to_add = items_to_add
@@ -475,23 +487,23 @@ class MapDiff(DiffElement[Map], Generic[_F, _D]):
     def to_primitive(self) -> Primitive:
         return {
             "diff_type": "map",
-            "keys_to_remove": [atom.to_primitive() for atom in self.keys_to_remove],
-            "items_to_set": [[key.to_primitive(), value.to_primitive()] for key, value in self.items_to_set],
-            "items_to_add": [[key.to_primitive(), value.to_primitive()] for key, value in self.items_to_add],
+            "keys_to_remove": list(sorted(cast(str, atom.to_primitive()) for atom in self.keys_to_remove)),
+            "items_to_set": list(sorted([key.to_primitive(), value.to_primitive()] for key, value in self.items_to_set)),
+            "items_to_add": list(sorted([key.to_primitive(), value.to_primitive()] for key, value in self.items_to_add)),
         }
 
     @classmethod
     def _from_primitive(cls, primitive: Primitive) -> "MapDiff":
         primitive = cast(dict[str, Primitive], primitive)
 
-        keys_to_remove = [Atom.from_primitive(atom) for atom in primitive["keys_to_remove"]]
-        items_to_add = [(Atom.from_primitive(entry[0]), FullElement.from_primitive(entry[1])) for entry in primitive["items_to_add"]]
-        items_to_set = [(Atom.from_primitive(entry[0]), DiffElement.from_primitive(entry[1])) for entry in primitive["items_to_set"]]
+        keys_to_remove = set(Atom._from_primitive(atom) for atom in primitive["keys_to_remove"])
+        items_to_add = set((Atom._from_primitive(entry[0]), FullElement.from_primitive(entry[1])) for entry in primitive["items_to_add"])
+        items_to_set = set((Atom._from_primitive(entry[0]), DiffElement.from_primitive(entry[1])) for entry in primitive["items_to_set"])
 
         return cls(
-            keys_to_remove=cast(Iterable[Atom], keys_to_remove),
-            items_to_add=cast(Iterable[tuple[Atom, _F]], items_to_add),
-            items_to_set=cast(Iterable[tuple[Atom, _D]], items_to_set),
+            keys_to_remove=cast(set[Atom], keys_to_remove),
+            items_to_add=cast(set[tuple[Atom, _F]], items_to_add),
+            items_to_set=cast(set[tuple[Atom, _D]], items_to_set),
         )
 
     @classmethod
@@ -499,7 +511,15 @@ class MapDiff(DiffElement[Map], Generic[_F, _D]):
         return Map
 
     def __hash__(self) -> int:
-        return hash((self.keys_to_remove, self.items_to_add, self.items_to_set))
+        h = 0
+        for key in self.keys_to_remove:
+            h ^= hash(key)
+        for item_to_add in self.items_to_add:
+            h ^= hash(item_to_add)
+        for item_to_set in self.items_to_set:
+            h ^= hash(item_to_set)
+
+        return h
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, MapDiff):
@@ -676,9 +696,11 @@ class ListDiff(DiffElement[List]):
     def __repr__(self) -> str:
         return str(self)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     from typing import Iterable
     import pathlib
+
     def find_test_files(filename: str) -> Iterable[pathlib.Path]:
         file = pathlib.Path(filename)
         pattern = f"test_{file.stem}.py"
@@ -691,6 +713,7 @@ if __name__ == '__main__':
             root = root.parent
 
     import unittest
+
     for testfile in find_test_files(__file__):
         tests = unittest.defaultTestLoader.discover(str(testfile.parent), pattern=testfile.name)
         runner = unittest.TextTestRunner()
