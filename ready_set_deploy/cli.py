@@ -76,6 +76,18 @@ def apply(actual_file: TextIO, diff_file: TextIO):
 
 
 @main.command()
+@click.argument("state_files", metavar="STATES", nargs=-1, type=click.File("r"))
+def combine(state_files: Iterable[TextIO]):
+    """
+    Combine multiple state files
+    """
+    print(type(state_files))
+    states = [System.from_primitive(json.load(state_file)) for state_file in state_files]
+
+    raise NotImplementedError("combine")
+
+
+@main.command()
 @click.argument("diff_file", metavar="DIFF", type=click.File("r"))
 @click.pass_obj
 def commands(config: Config, diff_file: TextIO):
