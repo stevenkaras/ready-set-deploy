@@ -125,9 +125,10 @@ class System:
         return str(self)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from typing import Iterable
     import pathlib
+
     def find_test_files(filename: str) -> Iterable[pathlib.Path]:
         file = pathlib.Path(filename)
         pattern = f"test_{file.stem}.py"
@@ -140,6 +141,7 @@ if __name__ == '__main__':
             root = root.parent
 
     import unittest
+
     for testfile in find_test_files(__file__):
         tests = unittest.defaultTestLoader.discover(str(testfile.parent), pattern=testfile.name)
         runner = unittest.TextTestRunner()

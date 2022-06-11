@@ -1,18 +1,18 @@
 import dataclasses
-from typing import Generic, cast, TypeVar, Type, Union
+from typing import cast, Union
 
 from ready_set_deploy.elements import DiffElement, FullElement
 
 
-_E = TypeVar("_E", DiffElement, FullElement)
+Elements = Union[DiffElement, FullElement]
 
 
 @dataclasses.dataclass
-class Component(Generic[_E]):
+class Component:
     name: str
     dependencies: list[tuple[str, tuple[str, ...]]] = dataclasses.field(default_factory=list)
     qualifier: tuple[str, ...] = dataclasses.field(default_factory=tuple)
-    elements: dict[str, _E] = dataclasses.field(default_factory=dict)
+    elements: dict[str, Elements] = dataclasses.field(default_factory=dict)
 
     def to_primitive(self) -> dict:
         return {
@@ -24,18 +24,17 @@ class Component(Generic[_E]):
 
     @classmethod
     def from_primitive(cls, primitive: dict, *, is_diff: bool) -> "Component":
-        element_type: Union[Type[DiffElement], Type[FullElement]]
+        elements: dict[str, Elements]
         if is_diff:
-            element_type = DiffElement
+            elements = {name: DiffElement.from_primitive(element) for name, element in primitive["elements"].items()}
         else:
-            element_type = FullElement
-        elements = {name: element_type.from_primitive(element) for name, element in primitive["elements"].items()}
+            elements = {name: FullElement.from_primitive(element) for name, element in primitive["elements"].items()}
 
         return cls(
             name=primitive["name"],
             dependencies=[(name, tuple(qualifier)) for name, qualifier in primitive["dependencies"]],
             qualifier=tuple(primitive["qualifier"]),
-            elements=cast(dict[str, _E], elements),
+            elements=elements,
         )
 
     @property
@@ -96,7 +95,7 @@ class Component(Generic[_E]):
 
         self_elements = cast(dict[str, FullElement], self.elements)
         other_elements = cast(dict[str, DiffElement], other.elements)
-        new_elements = {key: self_elements[key].apply(other_elements[key]) for key in self_elements.keys()}
+        new_elements: dict[str, Elements] = {key: self_elements[key].apply(other_elements[key]) for key in self_elements.keys()}
 
         return Component(
             name=self.name,
@@ -129,9 +128,10 @@ class Component(Generic[_E]):
         return str(self)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from typing import Iterable
     import pathlib
+
     def find_test_files(filename: str) -> Iterable[pathlib.Path]:
         file = pathlib.Path(filename)
         pattern = f"test_{file.stem}.py"
@@ -144,6 +144,7 @@ if __name__ == '__main__':
             root = root.parent
 
     import unittest
+
     for testfile in find_test_files(__file__):
         tests = unittest.defaultTestLoader.discover(str(testfile.parent), pattern=testfile.name)
         runner = unittest.TextTestRunner()
