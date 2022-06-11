@@ -1,10 +1,11 @@
 import logging
 import importlib
-from typing import Optional, TypeVar, Generic, Union
+from typing import TypeVar, Generic, Union
 from collections.abc import Iterable, Sequence
+from ready_set_deploy.components import Component
+from ready_set_deploy.gatherers.base import Gatherer
 
-from ready_set_deploy.model import SubsystemState
-from ready_set_deploy.providers.base import Provider
+from ready_set_deploy.renderers.base import Renderer
 
 log = logging.getLogger(__name__)
 
@@ -53,19 +54,18 @@ class _Registry(Generic[_V]):
 
         return f"<{self.__class__.__name__} handlers={handlers}>"
 
+    def __repr__(self):
+        return str(self)
 
-class ProviderRegistry(_Registry[Provider]):
-    def gather_local(self, name: str, *, qualifier: Optional[str] = None, previous_state: Optional[SubsystemState] = None) -> SubsystemState:
-        return self.get(name).gather_local(previous_state=previous_state, qualifier=qualifier)
 
-    def diff(self, name: str, left: SubsystemState, right: SubsystemState) -> tuple[SubsystemState, SubsystemState]:
-        return self.get(name).diff(left, right)
+class GathererRegistry(_Registry[Gatherer]):
+    def empty(self, name: str) -> Component:
+        return self.get(name).empty()
 
-    def combine(self, name: str, states: Iterable[SubsystemState]) -> Iterable[SubsystemState]:
-        return self.get(name).combine(states)
+    def gather_local(self, name: str, *, qualifier: tuple[str, ...] = ()) -> Component:
+        return self.get(name).gather_local(qualifier=qualifier)
 
-    def to_commands(self, name: str, desired: Optional[SubsystemState], undesired: Optional[SubsystemState]) -> Iterable[Sequence[str]]:
-        return self.get(name).to_commands(desired, undesired)
 
-    def is_valid(self, name: str, state: SubsystemState) -> Iterable[str]:
-        return self.get(name).is_valid(state)
+class RendererRegistry(_Registry[Renderer]):
+    def to_commands(self, name: str, diff: Component) -> Iterable[Sequence[str]]:
+        return self.get(name).to_commands(diff)

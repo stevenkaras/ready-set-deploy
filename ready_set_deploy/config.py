@@ -1,19 +1,21 @@
 from itertools import chain
 from typing import Any
 from collections.abc import Iterable
+import dataclasses
+import os
 import pathlib
 
 import tomli
 
-from ready_set_deploy.registry import ProviderRegistry
-
+from ready_set_deploy.registry import GathererRegistry, RendererRegistry
 
 DEFAULT_CONFIG_PATHS: list[str] = [
     "~/.config/rsd/config.toml",
     "./rsd.toml",
 ]
 BUILTIN_CONFIG = {
-    "packages.homebrew": "ready_set_deploy.providers.homebrew.HomebrewProvider",
+    "gather.packages.homebrew": "ready_set_deploy.gatherers.homebrew.HomebrewGatherer",
+    "render.packages.homebrew": "ready_set_deploy.renderers.homebrew.HomebrewRenderer",
 }
 
 
@@ -22,23 +24,10 @@ def load_config(configpaths: list[str] = []) -> dict[str, str]:
         with open(path, mode="rb") as f:
             return tomli.load(f)
 
-    default_paths = [
-        path
-        for path in [
-            pathlib.Path(path).expanduser()
-            for path in DEFAULT_CONFIG_PATHS
-        ]
-        if path.exists()
-    ]
-    user_paths = [
-        pathlib.Path(path).expanduser()
-        for path in configpaths
-    ]
+    default_paths = [path for path in [pathlib.Path(os.path.expandvars(path)).expanduser() for path in DEFAULT_CONFIG_PATHS] if path.exists()]
+    user_paths = [pathlib.Path(os.path.expandvars(path)).expanduser() for path in configpaths]
 
-    configs = [
-        _load_configfile(path)
-        for path in default_paths + user_paths
-    ]
+    configs = [_load_configfile(path) for path in default_paths + user_paths]
     configs.insert(0, BUILTIN_CONFIG)
 
     return _merge_configs(*configs)
@@ -63,6 +52,18 @@ def _merge_configs(*configs: dict[str, Any]) -> dict[str, Any]:
 
     return result
 
-def load_registry_from_config(configpaths: list[str] = []) -> ProviderRegistry:
-    merged_config = load_config(configpaths)
-    return ProviderRegistry.from_dict(merged_config)
+
+@dataclasses.dataclass
+class Config:
+    gatherers: GathererRegistry
+    renderers: RendererRegistry
+
+    @classmethod
+    def load_from_files(cls, configpaths: list[str] = []) -> "Config":
+        merged_config = load_config(configpaths)
+        gather_config = {k.removeprefix("gather."): v for k, v in merged_config.items() if k.startswith("gather.")}
+        render_config = {k.removeprefix("render."): v for k, v in merged_config.items() if k.startswith("render.")}
+        return cls(
+            gatherers=GathererRegistry.from_dict(gather_config),
+            renderers=RendererRegistry.from_dict(render_config),
+        )
