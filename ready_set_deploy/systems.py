@@ -118,6 +118,30 @@ class System:
 
         return System(components=list(new_components.values()))
 
+    def combine(self, other: "System") -> "System":
+        self._validate_compatible(other)
+        if self.is_diff() or other.is_diff():
+            raise ValueError(f"Cannot diff diff-systems")
+
+        self_components = self.components_by_dependency()
+        other_components = other.components_by_dependency()
+
+        new_components = {}
+        for key, component in self_components.items():
+            other_component = other_components.get(key)
+            if other_component is None:
+                new_components[key] = component.copy()
+            else:
+                new_components[key] = component.combine(other_component)
+
+        for key, component in other_components.items():
+            if key in new_components:
+                continue
+
+            new_components[key] = component.copy()
+
+        return System(components=list(new_components.values()))
+
     def __str__(self):
         return f"System(components={self.components})>"
 
