@@ -2,6 +2,17 @@
 
 This document aims to lay out the design philosophy and motivations behind RSD.
 
+## The original use case
+
+This project was started because I needed to keep my development environment synced between a laptop with a broken screen (but external screens worked fine), and a working laptop that I used as a laptop.
+My original solution was defining ansible playbooks to ensure I had the same tools installed on each, but ansible was overly cumbersome and felt like a huge time sink before it would become truly useful.
+I searched around and found pyinfra, which played well with my belief that XML is the worst programming language, and YAML is only slightly better.
+But pyinfra runs a ton of commands to gather the current system state each time, and while it was a slightly smaller time sink than ansible, it still felt like there's a better way.
+At the same time at my day job I started working with CDK, which inspired me to think about how to handle removing old resources.
+If you remove a package from ansible/pyinfra, it won't remove that package from the system - it requires actively defining an action to remove that package.
+But if you define all the packages that should be installed, then it's easy to figure out which ones don't belong.
+The problem then is making it easy to set up that full system definition - what better than to capture from an example system?
+
 ## Why existing solutions weren't sufficient
 
 Other systems take an imperative approach towards defining system state.
