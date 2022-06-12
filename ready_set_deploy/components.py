@@ -112,6 +112,22 @@ class Component:
             elements={name: element.full_type().zero().apply(element) for name, element in cast(dict[str, DiffElement], self.elements).items()},
         )
 
+    def combine(self, other: "Component") -> "Component":
+        self._validate_compatible(other)
+        if not self.is_full() or not other.is_full():
+            raise ValueError(f"Cannot combine diff-components")
+
+        self_elements = cast(dict[str, FullElement], self.elements)
+        other_elements = cast(dict[str, FullElement], other.elements)
+        new_elements: dict[str, Elements] = {key: self_elements[key].combine(other_elements[key]) for key in self_elements.keys()}
+
+        return Component(
+            name=self.name,
+            dependencies=self.dependencies,
+            qualifier=self.qualifier,
+            elements=new_elements,
+        )
+
     def copy(self) -> "Component":
         return Component(
             name=self.name,
