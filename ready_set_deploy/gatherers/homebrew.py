@@ -31,8 +31,7 @@ class HomebrewGatherer(Gatherer):
 
     def gather_local(self, *, qualifier: tuple[str, ...] = ()) -> Component:
         command = "brew tap".split()
-        info = Runner.lines(command)
-        taps = list(sorted(info))
+        taps = Runner.lines(command)
 
         command = "brew info --json=v2 --installed".split()
         info = Runner.json(command)
