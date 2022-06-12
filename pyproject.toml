@@ -5,6 +5,12 @@ description = "Ready-set-deploy is a deployment framework designed to be offline
 license = "MIT"
 authors = ["Steven Karas <steven.karas@gmail.com>"]
 readme = "README.md"
+repository = "https://github.com/stevenkaras/ready-set-deploy"
+classifiers = [
+    "Topic :: System :: Software Distribution",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"

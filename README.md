@@ -1,5 +1,7 @@
 # Ready-Set-Deploy!
 
+[![PyPI version](https://badge.fury.io/py/ready-set-deploy.svg)](https://badge.fury.io/py/ready-set-deploy)
+
 RSD is a deployment framework designed to work offline-first without a centralized controller.
 RSD is not an execution framework, nor does it specify how desired state is defined.
 
