@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Iterable
+from typing import Iterator
 
 from ready_set_deploy.components import Component
 from ready_set_deploy.elements import AtomDiff
@@ -37,7 +37,7 @@ class System:
             and all(dependency in components for component in self.components for dependency in component.dependencies)
         )
 
-    def _toposort_components(self) -> Iterable[Component]:
+    def __iter__(self) -> Iterator[Component]:
         components = self.components_by_dependency()
         while components:
             unblocked = [component for component in components.values() if all(dependency not in components for dependency in component.dependencies)]
@@ -66,7 +66,7 @@ class System:
             for component_key in other_components.keys() - self_components.keys()
             for component in (other_components[component_key],)
         }
-        # use a well known compnoent to indicate it should be removed (and add a single diff element to indicate it's a diff component)
+        # use a well known component to indicate it should be removed (and add a single diff element to indicate it's a diff component)
         components_to_remove = {
             component_key: Component(name="component.remove", dependencies=[], qualifier=(component.name, *component.qualifier), elements={"_": AtomDiff("")})
             for component_key in self_components.keys() - other_components.keys()

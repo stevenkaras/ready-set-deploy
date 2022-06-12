@@ -97,7 +97,7 @@ def commands(config: Config, diff_file: TextIO):
     diff_dict = json.load(diff_file)
     diff = System.from_primitive(diff_dict)
 
-    for component in diff.components:
+    for component in diff:
         for command in config.renderers.to_commands(component.name, component):
             print(shlex.join(command))
 
@@ -111,7 +111,7 @@ def providers(state_file: TextIO):
     state_dict = json.load(state_file)
     state = System.from_primitive(state_dict)
 
-    for component in state.components:
+    for component in state:
         print(f"p={component.name}")
         print(f"q={'/'.join(component.qualifier)}")
 
@@ -145,7 +145,7 @@ def apply_local(config: Config, role_file: TextIO):
     role = System.from_primitive(state_dict)
 
     local_components = []
-    for component in role.components:
+    for component in role:
         local_components.append(config.gatherers.gather_local(component.name, qualifier=component.qualifier))
 
     local_state = System(components=local_components)
