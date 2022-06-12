@@ -38,6 +38,19 @@ class FullElement(Element, Generic[_CD]):
         """
         raise NotImplementedError("apply")
 
+    def combine(self: _CF, other: _CF) -> _CF:
+        """
+        Combine two elements
+
+        This is roughly equivalent to:
+
+        >>> self.apply(other.zero().diff(other))
+
+        with the notable distinction that some elements can intelligently combine their members.
+        Because two atoms cannot exist side by side, members from other win in case of conflicts.
+        """
+        raise NotImplementedError("combine")
+
     @classmethod
     def zero(cls: type[_CF]) -> _CF:
         """
@@ -192,6 +205,9 @@ class Atom(FullElement["AtomDiff"]):
         other = cast(AtomDiff, other)
         return self.__class__(value=other.value)
 
+    def combine(self, other: "Atom") -> "Atom":
+        return Atom(other.value)
+
     def __hash__(self) -> int:
         return hash(self.value)
 
@@ -295,6 +311,11 @@ class Set(FullElement["SetDiff[_F]"], Generic[_F]):
         items -= other.to_remove
 
         return self.__class__(items=items)
+
+    def combine(self, other: "Set[_F]") -> "Set[_F]":
+        items = set(self._items)
+        items |= other._items
+        return Set(items)
 
     def add(self, value: _F) -> "Set[_F]":
         """
@@ -447,6 +468,16 @@ class Map(FullElement["MapDiff"], Generic[_F, _D]):
             new_map[key] = to_add
 
         return self.__class__(map=new_map)
+
+    def combine(self, other: "Map[_F, _D]") -> "Map[_F, _D]":
+        new_map = {k: v.copy() for k, v in self._map.items()}
+        for k, v in other._map.items():
+            if k in new_map:
+                new_map[k] = new_map[k].combine(v)
+            else:
+                new_map[k] = v.copy()
+
+        return Map(map=new_map)
 
     def __getitem__(self, key: Atom) -> _F:
         return self._map[key]
@@ -654,6 +685,31 @@ class List(FullElement["ListDiff"]):
             raise TypeError(f"{type(self)}s can only be applied with ListDiff. Got {type(other)}")
         new_atoms = self._apply_opcodes(self._atoms, other.diff)
         return self.__class__(atoms=new_atoms)
+
+    def combine(self, other: "List") -> "List":
+        new_atoms = list(self._atoms)
+
+        offset = 0
+        matcher = difflib.SequenceMatcher(a=self._atoms, b=other._atoms)
+        for group in matcher.get_grouped_opcodes(n=1):
+            for opcode, self_start, _, other_start, other_end in group:
+                if opcode == "equal":
+                    pass  # nop
+                elif opcode == "replace":
+                    # other sequences are inserted first
+                    insertion_idx = self_start + offset
+                    new_atoms[insertion_idx:insertion_idx] = other._atoms[other_start:other_end]
+                    offset += other_end - other_start
+                elif opcode == "insert":
+                    insertion_idx = self_start + offset
+                    new_atoms[insertion_idx:insertion_idx] = other._atoms[other_start:other_end]
+                    offset += other_end - other_start
+                elif opcode == "delete":
+                    pass  # nop
+                else:
+                    raise ValueError(f"Invalid opcode {opcode}")
+
+        return List(atoms=new_atoms)
 
     def __getitem__(self, idx: int) -> Atom:
         return self._atoms[idx]

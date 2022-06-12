@@ -54,6 +54,10 @@ class TestAtom(ElementTest):
             inferred = FullElement.infer(atomA.value)
             assert inferred == atomA
 
+        with self.subTest("Atom combine"):
+            combined = atomA.combine(atomB)
+            assert combined == atomB
+
 
 class TestSet(ElementTest):
     def test_atom_set(self):
@@ -66,6 +70,10 @@ class TestSet(ElementTest):
         with self.subTest("Set[Atom] infer"):
             inferred = FullElement.infer(set([a.value for a in setA]))
             assert inferred == setA
+
+        with self.subTest("Set[Atom] combine"):
+            combined = setA.combine(setB)
+            assert combined == FullElement.infer(set(["a", "both", "b"]))
 
     def test_atom_set_set(self):
         AtomSetSet = Set[Set[Atom]]
@@ -174,6 +182,11 @@ class TestMap(ElementTest):
             inferred = FullElement.infer({k.value: v.value for k, v in mapA.items()})
             assert inferred == mapA
 
+        with self.subTest("Map[Atom] combine"):
+            combined = mapA.combine(mapB)
+            expected = FullElement.infer({k: k for k in "a unchanged b".split()} | {"changed": "changedB"})
+            assert combined == expected
+
     def test_atom_set_map(self):
         AtomSetMap = Map[Set[Atom], SetDiff[Atom]]
         mapA = AtomSetMap(
@@ -203,6 +216,11 @@ class TestMap(ElementTest):
             inferred = FullElement.infer({k.value: set(a.value for a in v) for k, v in mapA.items()})
             assert inferred == mapA
 
+        with self.subTest("Map[Set[Atom]] combine"):
+            combined = mapA.combine(mapB)
+            expected = FullElement.infer({k: set([k]) for k in "a b both".split()} | {"changed": set("a b both".split())})
+            assert combined == expected
+
     def test_atom_map_map(self):
         NestedMap = Map[Map[Atom, AtomDiff], MapDiff[Atom, AtomDiff]]
 
@@ -210,23 +228,24 @@ class TestMap(ElementTest):
             {
                 Atom("a"): Map(
                     {
-                        Atom("name"): Atom("a"),
+                        Atom("a"): Atom("a"),
                     }
                 ),
                 Atom("unchanged"): Map(
                     {
-                        Atom("name"): Atom("unchanged"),
+                        Atom("unchanged"): Atom("unchanged"),
                     }
                 ),
                 Atom("changed"): Map(
                     {
-                        Atom("name"): Atom("changed"),
+                        Atom("changed"): Atom("changed"),
                     }
                 ),
                 Atom("nested"): Map(
                     {
-                        Atom("name"): Atom("nested"),
-                        Atom("prefix"): Atom("a"),
+                        Atom("a"): Atom("a"),
+                        Atom("both"): Atom("both"),
+                        Atom("changed"): Atom("changed"),
                     }
                 ),
             }
@@ -235,23 +254,24 @@ class TestMap(ElementTest):
             {
                 Atom("b"): Map(
                     {
-                        Atom("name"): Atom("b"),
+                        Atom("b"): Atom("b"),
                     }
                 ),
                 Atom("unchanged"): Map(
                     {
-                        Atom("name"): Atom("unchanged"),
+                        Atom("unchanged"): Atom("unchanged"),
                     }
                 ),
                 Atom("changed"): Map(
                     {
-                        Atom("name"): Atom("changedB"),
+                        Atom("changed"): Atom("changedB"),
                     }
                 ),
                 Atom("nested"): Map(
                     {
-                        Atom("name"): Atom("nested"),
-                        Atom("prefix"): Atom("b"),
+                        Atom("b"): Atom("b"),
+                        Atom("both"): Atom("both"),
+                        Atom("changed"): Atom("changedB"),
                     }
                 ),
             }
@@ -262,6 +282,14 @@ class TestMap(ElementTest):
         with self.subTest("Map[Map[Atom]] infer"):
             inferred = FullElement.infer({k.value: {sk.value: sv.value for sk, sv in v.items()} for k, v in mapA.items()})
             assert inferred == mapA
+
+        with self.subTest("Map[Map[Atom]] combine"):
+            combined = mapA.combine(mapB)
+            expected = FullElement.infer(
+                {k: {k: k} for k in "a b unchanged".split()}
+                | {"changed": {"changed": "changedB"}, "nested": {k: k for k in "a b both".split()} | {"changed": "changedB"}}
+            )
+            assert combined == expected
 
 
 class TestList(ElementTest):
@@ -274,6 +302,11 @@ class TestList(ElementTest):
         with self.subTest("List infer"):
             inferred = FullElement.infer([a.value for a in listA])
             assert inferred == listA
+
+        with self.subTest("List combine"):
+            combined = listA.combine(listB)
+            expected = FullElement.infer(list("abcdefghijklmqnop"))
+            assert combined == expected
 
 
 if __name__ == "__main__":
