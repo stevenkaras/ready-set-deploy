@@ -393,7 +393,7 @@ class Map(FullElement["MapDiff"], Generic[_F, _D]):
     def __init__(self, map: MutableMapping[Atom, _F]) -> None:
         self._map = map
 
-    def copy(self) -> "Map":
+    def copy(self) -> "Map[_F, _D]":
         return self.__class__(map={key: value.copy() for key, value in self._map.items()})
 
     def to_primitive(self) -> Primitive:
@@ -414,34 +414,31 @@ class Map(FullElement["MapDiff"], Generic[_F, _D]):
         return cls(map={Atom._infer(key): cast(_F, FullElement.infer(value)) for key, value in map.items()})
 
     @classmethod
-    def zero(cls) -> "Map":
+    def zero(cls) -> "Map[_F, _D]":
         return cls(map={})
 
     @classmethod
     def diff_type(cls) -> type["MapDiff"]:
         return MapDiff
 
-    def diff(self, other: "Map") -> "MapDiff":
+    def diff(self, other: "Map[_F, _D]") -> "MapDiff[_F, _D]":
         if not isinstance(other, type(self)):
             raise TypeError(f"{type(self)} are only diffable against other {type(self)}. Got {type(other)}")
         keys_to_remove = set(self._map.keys()) - set(other._map.keys())
-        raw_items_to_add = set((key, value.copy()) for key, value in other._map.items() if key not in self._map)
-        items_to_add = cast(set[tuple[Atom, _F]], raw_items_to_add)
-        raw_items_to_set = set((key, self._map[key].diff(value)) for key, value in other._map.items() if key in self._map and self._map[key] != value)
-        items_to_set = cast(set[tuple[Atom, _D]], raw_items_to_set)
+        items_to_add = set((key, value.copy()) for key, value in other._map.items() if key not in self._map)
+        items_to_set = set((key, self._map[key].diff(value)) for key, value in other._map.items() if key in self._map and self._map[key] != value)
         diff_type = cast(type[MapDiff[_F, _D]], self.diff_type())
         return diff_type(keys_to_remove=keys_to_remove, items_to_add=items_to_add, items_to_set=items_to_set)
 
-    def apply(self, other: "MapDiff") -> "Map":
+    def apply(self, other: "MapDiff[_F, _D]") -> "Map[_F, _D]":
         if not isinstance(other, self.diff_type()):
             raise TypeError(f"{type(self)}s can only be applied with {self.diff_type}. Got {type(other)}")
-        other = cast(MapDiff[_F, _D], other)
-        new_map = dict(self._map)
+        new_map = {k: v.copy() for k, v in self._map.items()}
         for key in other.keys_to_remove:
             del new_map[key]
 
         for key, to_set in other.items_to_set:
-            new_map[key] = cast(_F, self._map[key].apply(to_set))
+            new_map[key] = self._map[key].apply(to_set)
 
         for key, to_add in other.items_to_add:
             new_map[key] = to_add
@@ -506,7 +503,7 @@ class MapDiff(DiffElement[Map], Generic[_F, _D]):
         self.items_to_set = items_to_set
         self.items_to_add = items_to_add
 
-    def copy(self) -> "MapDiff":
+    def copy(self) -> "MapDiff[_F, _D]":
         return self.__class__(
             keys_to_remove=self.keys_to_remove,
             items_to_add=self.items_to_add,
