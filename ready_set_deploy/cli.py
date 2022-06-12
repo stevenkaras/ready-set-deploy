@@ -81,10 +81,13 @@ def combine(state_files: Iterable[TextIO]):
     """
     Combine multiple state files
     """
-    print(type(state_files))
     states = [System.from_primitive(json.load(state_file)) for state_file in state_files]
 
-    raise NotImplementedError("combine")
+    combined = System()
+    for state in states:
+        combined = combined.combine(state)
+
+    print(json.dumps(combined.to_primitive(), sort_keys=True))
 
 
 @main.command()

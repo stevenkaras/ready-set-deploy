@@ -33,7 +33,7 @@ class System:
         components = self.components_by_dependency()
         return (
             all(component.is_valid() for component in self.components)
-            and (self.is_diff() ^ self.is_full())
+            and ((self.is_diff() ^ self.is_full()) or not self.components)
             and all(dependency in components for component in self.components for dependency in component.dependencies)
         )
 
@@ -55,7 +55,7 @@ class System:
 
     def diff(self, other: "System") -> "System":
         self._validate_compatible(other)
-        if self.is_diff() or other.is_diff():
+        if not self.is_full() or not other.is_full():
             raise ValueError(f"Cannot diff diff-systems")
 
         self_components = self.components_by_dependency()
@@ -87,7 +87,7 @@ class System:
 
     def apply(self, other: "System") -> "System":
         self._validate_compatible(other)
-        if self.is_diff() or other.is_full():
+        if not self.is_full() or not other.is_diff():
             raise ValueError(f"Cannot only apply diff components to full components")
 
         self_components = self.components_by_dependency()
@@ -120,8 +120,8 @@ class System:
 
     def combine(self, other: "System") -> "System":
         self._validate_compatible(other)
-        if self.is_diff() or other.is_diff():
-            raise ValueError(f"Cannot diff diff-systems")
+        if not self.is_full() or not other.is_full():
+            raise ValueError(f"Cannot combine diff-systems")
 
         self_components = self.components_by_dependency()
         other_components = other.components_by_dependency()
