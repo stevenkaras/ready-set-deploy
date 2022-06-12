@@ -12,7 +12,7 @@ rsd combine provider1_state.json provider2_state.json > host_state.json
 rsd diff host_state.json role_state.json > plan.json
 rsd commands plan.json
 
-# As individual steps
+# As individual steps with some shortcuts
 bash -x <(rsd diff <(rsd providers role_state.json | rsd gather-all) role_state.json | rsd commands -)
 # Or all together in a single command
 bash -x <(rsd apply-local role_state.json)

@@ -135,11 +135,11 @@ def gather_all(config: Config, providers_file: TextIO):
 
 
 @main.command(name="apply-local")
-@click.argument("role_file", metavar="ROLE", type=click.File("r"))
+@click.argument("role_file", metavar="[ROLE|PLAN]", type=click.File("r"))
 @click.pass_obj
 def apply_local(config: Config, role_file: TextIO):
     """
-    Generate the commands for the diff from the local system to the provided ROLE
+    Generate the commands for the diff from the local system to the provided ROLE or the given PLAN
     """
     state_dict = json.load(role_file)
     role = System.from_primitive(state_dict)
@@ -149,8 +149,12 @@ def apply_local(config: Config, role_file: TextIO):
         local_components.append(config.gatherers.gather_local(component.name, qualifier=component.qualifier))
 
     local_state = System(components=local_components)
-    applied = local_state.apply(role)
-    diff = local_state.diff(applied)
+
+    if role.is_diff():
+        applied = local_state.apply(role)
+        diff = local_state.diff(applied)
+    else:
+        diff = local_state.diff(role)
     for component in diff.components:
         for command in config.renderers.to_commands(component.name, component):
             print(shlex.join(command))
