@@ -628,23 +628,24 @@ class List(FullElement["ListDiff"]):
         return diff_type(diff=diff)
 
     def _apply_opcodes(self, atoms: list[Atom], opcodes: list[tuple[str, int, str]]) -> list[Atom]:
+        new_atoms = list(atoms)
         for raw_opcode, idx, replacement in opcodes:
             atom = Atom(replacement)
             opcode = _DiffOpcode(raw_opcode)
             if opcode == _DiffOpcode.EQUAL:
-                actual = atoms[idx]
+                actual = new_atoms[idx]
                 if atom is not None and actual != atom:
                     raise ValueError(f"Diffs don't match at offset {idx}. Expected `{atom}` but got `{actual}`")
             elif opcode == _DiffOpcode.REPLACE:
-                atoms[idx] = atom
+                new_atoms[idx] = atom
             elif opcode == _DiffOpcode.INSERT:
-                atoms.insert(idx, atom)
+                new_atoms.insert(idx, atom)
             elif opcode == _DiffOpcode.DELETE:
-                del atoms[idx : idx + 1]
+                del new_atoms[idx : idx + 1]
             else:
                 raise ValueError(f"Invalid opcode {opcode}")
 
-        return atoms
+        return new_atoms
 
     def apply(self, other: "ListDiff") -> "List":
         if not isinstance(other, ListDiff):
