@@ -109,7 +109,11 @@ def commands(config: Config, diff_file: TextIO):
 @click.argument("state_file", metavar="STATE", type=click.File("r"))
 def providers(state_file: TextIO):
     """
-    Output a list of provider/qualifier pairs
+    Output provider/qualifier pairs for gather-all
+
+    Intended for use in conjuction with gather-all as such:
+
+      rsd providers role.rsd.json | rsd gather-all
     """
     state_dict = json.load(state_file)
     state = System.from_primitive(state_dict)
@@ -124,7 +128,11 @@ def providers(state_file: TextIO):
 @click.pass_obj
 def gather_all(config: Config, providers_file: TextIO):
     """
-    Gather each provider/qualifier pair from stdin
+    Gather each provider/qualifier pair (from providers command)
+
+    Intended for use in conjunction with providers as such:
+
+      rsd providers role.rsd.json | rsd gather-all
     """
     components = []
     for provider_line, qualifier_line in sliced(providers_file.readlines(), n=2, strict=True):
