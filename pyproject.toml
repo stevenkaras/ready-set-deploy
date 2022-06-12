@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ready-set-deploy"
-version = "0.1.0"
-description = "Deployment/Provisioning done right"
+version = "1.0.0"
+description = "Ready-set-deploy is a deployment framework designed to be offline-first "
 license = "MIT"
 authors = ["Steven Karas <steven.karas@gmail.com>"]
 readme = "README.md"
