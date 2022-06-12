@@ -4,6 +4,7 @@ import difflib
 from enum import Enum
 
 Primitive = Union[str, list, dict]
+Inferrable = Union[str, list, dict, set]
 
 
 class Element:
@@ -83,6 +84,19 @@ class FullElement(Element, Generic[_CD]):
         else:
             raise TypeError(f"Expected a primitive, got {type(primitive)}")
 
+    @classmethod
+    def infer(cls, inferrable: Inferrable) -> "FullElement":
+        if isinstance(inferrable, str):
+            return Atom._infer(inferrable)
+        elif isinstance(inferrable, list):
+            return List._infer(inferrable)
+        elif isinstance(inferrable, set):
+            return Set._infer(inferrable)
+        elif isinstance(inferrable, dict):
+            return Map._infer(inferrable)
+        else:
+            raise TypeError(f"Expected an inferrable type, got {type(inferrable)}")
+
 
 class DiffElement(Element, Generic[_CF]):
     """
@@ -153,6 +167,10 @@ class Atom(FullElement["AtomDiff"]):
     def _from_primitive(cls, primitive: Primitive) -> "Atom":
         primitive = cast(str, primitive)
         return cls(value=primitive)
+
+    @classmethod
+    def _infer(cls, value: str) -> "Atom":
+        return cls(value=value)
 
     @classmethod
     def zero(cls) -> "Atom":
@@ -244,6 +262,10 @@ class Set(FullElement["SetDiff[_F]"], Generic[_F]):
         primitive = cast(list[str], primitive)
         items = set([FullElement.from_primitive(item) for item in primitive])
         return cls(items=cast(set[_F], items))
+
+    @classmethod
+    def _infer(cls, items: set) -> "Set":
+        return cls(items=cast(set[_F], set(FullElement.infer(item) for item in items)))
 
     @classmethod
     def zero(cls) -> "Set[_F]":
@@ -386,6 +408,10 @@ class Map(FullElement["MapDiff"], Generic[_F, _D]):
             element_map[cast(Atom, FullElement.from_primitive(raw_key))] = cast(_F, FullElement.from_primitive(raw_value))
 
         return cls(map=element_map)
+
+    @classmethod
+    def _infer(cls, map: dict) -> "Map":
+        return cls(map={Atom._infer(key): cast(_F, FullElement.infer(value)) for key, value in map.items()})
 
     @classmethod
     def zero(cls) -> "Map":
@@ -566,6 +592,10 @@ class List(FullElement["ListDiff"]):
         primitive = cast(list[str], primitive)
         atoms = [FullElement.from_primitive(atom) for atom in primitive]
         return cls(atoms=cast(list[Atom], atoms))
+
+    @classmethod
+    def _infer(cls, items: list) -> "List":
+        return cls(atoms=[Atom._infer(item) for item in items])
 
     @classmethod
     def zero(cls) -> "List":

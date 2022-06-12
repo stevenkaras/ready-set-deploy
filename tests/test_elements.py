@@ -50,6 +50,10 @@ class TestAtom(ElementTest):
         atomA, atomB = self._build_atoms()
         self._run_standard_tests("Atom", atomA, atomB)
 
+        with self.subTest("Atom infer"):
+            inferred = FullElement.infer(atomA.value)
+            assert inferred == atomA
+
 
 class TestSet(ElementTest):
     def test_atom_set(self):
@@ -58,6 +62,10 @@ class TestSet(ElementTest):
         setB = AtomSet(set([Atom(v) for v in ["b", "both"]]))
 
         self._run_standard_tests("Set[Atom]", setA, setB)
+
+        with self.subTest("Set[Atom] infer"):
+            inferred = FullElement.infer(set([a.value for a in setA]))
+            assert inferred == setA
 
     def test_atom_set_set(self):
         AtomSetSet = Set[Set[Atom]]
@@ -162,6 +170,10 @@ class TestMap(ElementTest):
 
         self._run_standard_tests("Map[Atom]", mapA, mapB)
 
+        with self.subTest("Map[Atom] infer"):
+            inferred = FullElement.infer({k.value: v.value for k, v in mapA.items()})
+            assert inferred == mapA
+
     def test_atom_set_map(self):
         AtomSetMap = Map[Set[Atom], SetDiff[Atom]]
         mapA = AtomSetMap(
@@ -186,6 +198,10 @@ class TestMap(ElementTest):
         )
 
         self._run_standard_tests("Map[Set[Atom]]", mapA, mapB)
+
+        with self.subTest("Map[Set[Atom]] infer"):
+            inferred = FullElement.infer({k.value: set(a.value for a in v) for k, v in mapA.items()})
+            assert inferred == mapA
 
     def test_atom_map_map(self):
         NestedMap = Map[Map[Atom, AtomDiff], MapDiff[Atom, AtomDiff]]
@@ -243,6 +259,10 @@ class TestMap(ElementTest):
 
         self._run_standard_tests("Map[Map[Atom]]", mapA, mapB)
 
+        with self.subTest("Map[Map[Atom]] infer"):
+            inferred = FullElement.infer({k.value: {sk.value: sv.value for sk, sv in v.items()} for k, v in mapA.items()})
+            assert inferred == mapA
+
 
 class TestList(ElementTest):
     def test_list(self):
@@ -250,6 +270,10 @@ class TestList(ElementTest):
         listB = List([Atom(v) for v in "a b d e f g h i j k l m q o p".split()])
 
         self._run_standard_tests("List", listA, listB)
+
+        with self.subTest("List infer"):
+            inferred = FullElement.infer([a.value for a in listA])
+            assert inferred == listA
 
 
 if __name__ == "__main__":
