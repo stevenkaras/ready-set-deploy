@@ -12,6 +12,12 @@ class TestComponent(unittest.TestCase):
         applied = cfoo1.apply(diffed)
         assert applied == cfoo2
 
+    def test_combine(self):
+        cfoo1 = Component(name="foo", dependencies=[], qualifier=(), elements={"foo": Atom("foobar")})
+        cfoo2 = Component(name="foo", dependencies=[], qualifier=(), elements={"foo": Atom("foobaz")})
+        combined = cfoo1.combine(cfoo2)
+        assert combined == cfoo2
+
     def test_empty_validity(self):
         empty = Component(name="empty", dependencies=[], qualifier=(), elements={})
         assert empty.is_diff()
