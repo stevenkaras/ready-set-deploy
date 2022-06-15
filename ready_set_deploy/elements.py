@@ -1,5 +1,7 @@
 from collections.abc import Iterable, MutableMapping
-from typing import Generic, Iterator, Optional, TypeVar, cast, Union
+from typing import Generic, Iterator, Optional, TypeVar, cast, Union, Literal
+from functools import total_ordering
+import heapq
 import difflib
 from enum import Enum
 
@@ -11,6 +13,9 @@ class Element:
     """
     Elements are the basic building blocks of system configuration state.
     """
+
+    def __lt__(self, __o: object) -> bool:
+        raise NotImplementedError("<")
 
 
 _CF = TypeVar("_CF", bound="FullElement")
@@ -162,6 +167,7 @@ _F = TypeVar("_F", bound=FullElement)
 _D = TypeVar("_D", bound=DiffElement)
 
 
+@total_ordering
 class Atom(FullElement["AtomDiff"]):
     """
     Represents an atomically replaceable element (a string).
@@ -212,10 +218,16 @@ class Atom(FullElement["AtomDiff"]):
         return hash(self.value)
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, Atom):
-            return __o.value == self.value
-        else:
-            raise TypeError("Atoms are only comparable to other atoms")
+        if not isinstance(__o, Atom):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return self.value == __o.value
+
+    def __lt__(self, __o: object) -> bool:
+        if not isinstance(__o, Atom):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return self.value < __o.value
 
     def __str__(self) -> str:
         return self.value
@@ -224,6 +236,7 @@ class Atom(FullElement["AtomDiff"]):
         return f'{self.__class__.__name__}("{self.value}")'
 
 
+@total_ordering
 class AtomDiff(DiffElement["Atom"]):
     def __init__(self, value: str) -> None:
         self.value = value
@@ -247,10 +260,16 @@ class AtomDiff(DiffElement["Atom"]):
         return hash(self.value)
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, AtomDiff):
-            return __o.value == self.value
-        else:
-            raise TypeError("AtomDiffs are only comparable to other atom diffs")
+        if not isinstance(__o, AtomDiff):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return self.value == __o.value
+
+    def __lt__(self, __o: object) -> bool:
+        if not isinstance(__o, AtomDiff):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return self.value < __o.value
 
     def __str__(self) -> str:
         return self.value
@@ -259,6 +278,51 @@ class AtomDiff(DiffElement["Atom"]):
         return f'{self.__class__.__name__}("{self.value}")'
 
 
+def _compare_elements(lhs: Iterable, rhs: Iterable) -> Literal[-1, 0, 1]:
+    """
+    compare two element containers.
+
+    If lhs is less than rhs, returns -1
+    If lhs is equal to rhs, returns 0
+    if lhs is greather than rhs, return 1
+    """
+    self_items = list(lhs)
+    heapq.heapify(self_items)
+    other_items = list(rhs)
+    heapq.heapify(other_items)
+
+    while self_items:
+        if not other_items:
+            return 1
+
+        self_item = heapq.heappop(self_items)
+        other_item = heapq.heappop(other_items)
+        if self_item == other_item:
+            continue
+
+        if self_item < other_item:
+            return -1
+        else:
+            return 1
+
+    return 0
+
+
+def _lt_elements(lhss: Iterable[Iterable], rhss: Iterable[Iterable]) -> bool:
+    """
+    Compare several element containers in sequence and return True iff lhss is less than rhss
+    """
+    for lhs, rhs in zip(lhss, rhss):
+        cmp = _compare_elements(lhs, rhs)
+        if cmp == 1:
+            return False
+        elif cmp == -1:
+            return True
+
+    return False
+
+
+@total_ordering
 class Set(FullElement["SetDiff[_F]"], Generic[_F]):
     """
     A set is an element representing an unordered collection of Atoms
@@ -347,10 +411,16 @@ class Set(FullElement["SetDiff[_F]"], Generic[_F]):
         return h
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, Set):
-            return __o._items == self._items
-        else:
-            raise TypeError("Sets are only comparable to other set")
+        if not isinstance(__o, Set):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return self._items == __o._items
+
+    def __lt__(self, __o: object) -> bool:
+        if not isinstance(__o, Set):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return _lt_elements((self._items,), (__o._items,))
 
     def __str__(self) -> str:
         return str(self._items)
@@ -359,6 +429,7 @@ class Set(FullElement["SetDiff[_F]"], Generic[_F]):
         return f"{self.__class__.__name__}({self._items!r})"
 
 
+@total_ordering
 class SetDiff(DiffElement["Set[_F]"], Generic[_F]):
     def __init__(self, to_add: set[_F], to_remove: set[_F]) -> None:
         self.to_add = to_add
@@ -398,10 +469,16 @@ class SetDiff(DiffElement["Set[_F]"], Generic[_F]):
         return h
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, SetDiff):
-            return __o.to_add == self.to_add and __o.to_remove == self.to_remove
-        else:
-            raise TypeError(f"SetDiffs are only comparable to other set diffs, not {type(__o)}")
+        if not isinstance(__o, SetDiff):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return __o.to_add == self.to_add and __o.to_remove == self.to_remove
+
+    def __lt__(self, __o: object) -> bool:
+        if not isinstance(__o, SetDiff):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return _lt_elements((self.to_add, self.to_remove), (__o.to_add, __o.to_remove))
 
     def __str__(self) -> str:
         return f"(+{self.to_add} -{self.to_remove})"
@@ -516,10 +593,16 @@ class Map(FullElement["MapDiff"], Generic[_F, _D]):
         return h
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, Map):
-            return __o._map == self._map
-        else:
-            raise TypeError(f"{type(self)} are only comparable to other {type(self)}")
+        if not isinstance(__o, Map):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return __o._map == self._map
+
+    def __lt__(self, __o: object) -> bool:
+        if not isinstance(__o, Map):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return _lt_elements((self._map.items(),), (__o._map.items(),))
 
     def __str__(self) -> str:
         return str(self._map)
@@ -582,10 +665,16 @@ class MapDiff(DiffElement[Map], Generic[_F, _D]):
         return h
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, MapDiff):
-            return __o.keys_to_remove == self.keys_to_remove and __o.items_to_set == self.items_to_set and __o.items_to_add == self.items_to_add
-        else:
-            raise TypeError(f"{type(self)} are only comparable to other {type(self)}")
+        if not isinstance(__o, MapDiff):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return __o.keys_to_remove == self.keys_to_remove and __o.items_to_set == self.items_to_set and __o.items_to_add == self.items_to_add
+
+    def __lt__(self, __o: object) -> bool:
+        if not isinstance(__o, MapDiff):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return _lt_elements((self.keys_to_remove, self.items_to_set, self.items_to_add), (__o.keys_to_remove, __o.items_to_set, __o.items_to_add))
 
     def __str__(self) -> str:
         return f"(+{self.items_to_add} ~{self.items_to_set} -{self.keys_to_remove})"
@@ -741,10 +830,16 @@ class List(FullElement["ListDiff"]):
         return hash(self._atoms)
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, List):
-            return __o._atoms == self._atoms
-        else:
-            raise TypeError("Lists are only comparable to other lists")
+        if not isinstance(__o, List):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return __o._atoms == self._atoms
+
+    def __lt__(self, __o: object) -> bool:
+        if not isinstance(__o, List):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return self._atoms < __o._atoms
 
     def __str__(self) -> str:
         return str(self._atoms)
@@ -778,10 +873,16 @@ class ListDiff(DiffElement[List]):
         return hash(self.diff)
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, ListDiff):
-            return __o.diff == self.diff
-        else:
-            raise TypeError("ListDiffs are only comparable to other list diffs")
+        if not isinstance(__o, ListDiff):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return __o.diff == self.diff
+
+    def __lt__(self, __o: object) -> bool:
+        if not isinstance(__o, ListDiff):
+            raise TypeError(f"{type(self)} are only comparable to other {type(self)}, not {type(__o)}")
+
+        return self.diff < __o.diff
 
     def __str__(self) -> str:
         return str(self.diff)

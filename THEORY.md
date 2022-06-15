@@ -6,8 +6,6 @@ RSD is built on top of a simple hierarchy:
 - Component
 - Element
 
-The definitions below are hopefully sufficient
-
 ## Elements
 
 Elements come in one of the following types:
@@ -28,9 +26,11 @@ The third operation is combine (denoted as "A & B = C"), which produces a possib
 This is roughly equivalent to: "A + (0 - B) = C".
 This operation should be idempotent.
 
+Elements have a total order defined for each type (so Atoms are comparable to Atoms, but not to Sets).
+
 ### Atoms
 
-Atoms are unsplittable, and are just text.
+Atoms are unsplittable, and are just immutable text.
 
 #### Diff:
 
@@ -38,7 +38,13 @@ Replaces the left side with the right.
 
 #### Combine:
 
-Produces the right side
+Produces the right side.
+
+#### Ordering:
+
+Lexicographically ordered.
+
+Diffs are lexicographically ordered.
 
 ### Sets
 
@@ -52,6 +58,11 @@ Produces the items to add (B - A), and the items to remove (A - B)
 
 Produces the union of the sets.
 
+#### Ordering:
+
+Ordered by comparing sorted items in the set - absence of a corresponding element is considered smaller, such that `{A}` is smaller than `{A, B}`.
+However, note that `{A, B}` is smaller than `{B}` because `A` is smaller than `B`.
+
 ### Maps
 
 Maps are mappings from Atoms to other elements.
@@ -64,6 +75,10 @@ Also produces key value pairs of those in B that are not in A, and those which a
 #### Combine:
 
 Produces a map that is the recursive combination of shared keys, and the union of the disjoint mappings.
+
+#### Ordering:
+
+Ordered by comparing sorted key value pairs - absence of a key is considered smaller.
 
 ### Lists
 
@@ -80,6 +95,10 @@ In terms of implementation guidance: stand on the shoulders of giants. Encoding 
 #### Combine:
 
 Produces the naive merge based on the diff-basically adding both sides of the diff.
+
+#### Ordering:
+
+Ordered by comparing atoms in the order they appear in the list.
 
 ### Where practice departs from theory
 

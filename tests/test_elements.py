@@ -58,6 +58,9 @@ class TestAtom(ElementTest):
             combined = atomA.combine(atomB)
             assert combined == atomB
 
+        with self.subTest("Atom ordering"):
+            assert atomA < atomB
+
 
 class TestSet(ElementTest):
     def test_atom_set(self):
@@ -74,6 +77,10 @@ class TestSet(ElementTest):
         with self.subTest("Set[Atom] combine"):
             combined = setA.combine(setB)
             assert combined == FullElement.infer(set(["a", "both", "b"]))
+
+        with self.subTest("Set[Atom] ordering"):
+            assert setA < setB, f"{setA=} {setB=}"
+            assert FullElement.infer(set(["a", "b"])) < FullElement.infer(set(["b"]))
 
     def test_atom_set_set(self):
         AtomSetSet = Set[Set[Atom]]
@@ -186,6 +193,9 @@ class TestMap(ElementTest):
             combined = mapA.combine(mapB)
             expected = FullElement.infer({k: k for k in "a unchanged b".split()} | {"changed": "changedB"})
             assert combined == expected
+
+        with self.subTest("Map[Atom] ordering"):
+            assert mapA < mapB
 
     def test_atom_set_map(self):
         AtomSetMap = Map[Set[Atom], SetDiff[Atom]]
@@ -307,6 +317,11 @@ class TestList(ElementTest):
             combined = listA.combine(listB)
             expected = FullElement.infer(list("abcdefghijklmqnop"))
             assert combined == expected
+
+        with self.subTest("Map[Atom] ordering"):
+            assert FullElement.infer("a b c".split()) < FullElement.infer("a b d".split())
+            assert FullElement.infer("a b".split()) < FullElement.infer("a b d".split())
+            assert FullElement.infer("a b".split()) < FullElement.infer("b c".split())
 
 
 if __name__ == "__main__":
