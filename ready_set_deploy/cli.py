@@ -38,7 +38,7 @@ def gather(config: Config, provider: str, qualifier: Optional[str] = None):
     """
     component = config.gatherers.gather_local(provider, qualifier=_parse_qualifier(qualifier))
     system = System(components=[component])
-    print(json.dumps(system.to_primitive(), sort_keys=True))
+    print(json.dumps(system.to_primitive(), sort_keys=True, indent=2))
 
 
 @main.command()
@@ -55,7 +55,7 @@ def diff(actual_file: TextIO, goal_file: TextIO):
 
     diff = actual.diff(goal)
 
-    print(json.dumps(diff.to_primitive(), sort_keys=True))
+    print(json.dumps(diff.to_primitive(), sort_keys=True, indent=2))
 
 
 @main.command()
@@ -72,7 +72,7 @@ def apply(actual_file: TextIO, diff_file: TextIO):
 
     applied = actual.apply(diff)
 
-    print(json.dumps(applied.to_primitive(), sort_keys=True))
+    print(json.dumps(applied.to_primitive(), sort_keys=True, indent=2))
 
 
 @main.command()
@@ -87,7 +87,7 @@ def combine(state_files: Iterable[TextIO]):
     for state in states:
         combined = combined.combine(state)
 
-    print(json.dumps(combined.to_primitive(), sort_keys=True))
+    print(json.dumps(combined.to_primitive(), sort_keys=True, indent=2))
 
 
 @main.command()
@@ -142,7 +142,7 @@ def gather_all(config: Config, providers_file: TextIO):
         components.append(config.gatherers.gather_local(provider, qualifier=_parse_qualifier(qualifier)))
 
     state = System(components=components)
-    print(json.dumps(state.to_primitive(), sort_keys=True))
+    print(json.dumps(state.to_primitive(), sort_keys=True, indent=2))
 
 
 @main.command(name="apply-local")
