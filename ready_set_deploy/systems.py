@@ -142,6 +142,12 @@ class System:
 
         return System(components=list(new_components.values()))
 
+    def __eq__(self, __o: object) -> bool:
+        if not isinstance(__o, System):
+            raise NotImplementedError(f"Cannot only compare {type(self)} to other {type(self)}, not {type(__o)}")
+
+        return sorted(self.components) == sorted(__o.components)
+
     def __str__(self):
         return f"System(components={self.components})>"
 
