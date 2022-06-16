@@ -399,7 +399,7 @@ class Set(FullElement["SetDiff[_F]"], Generic[_F]):
         return len(self._items)
 
     def __iter__(self) -> Iterator[_F]:
-        return iter(self._items)
+        yield from sorted(self._items)
 
     def __contains__(self, item) -> bool:
         return item in self._items
@@ -566,19 +566,19 @@ class Map(FullElement["MapDiff"], Generic[_F, _D]):
         return len(self._map)
 
     def __iter__(self) -> Iterator[Atom]:
-        return iter(self._map)
+        yield from sorted(self._map.keys())
 
     def __contains__(self, key: Atom) -> bool:
         return key in self._map
 
     def keys(self) -> Iterable[Atom]:
-        return self._map.keys()
+        yield from sorted(self._map.keys())
 
     def values(self) -> Iterable[_F]:
-        return self._map.values()
+        yield from sorted(self._map.values())
 
     def items(self) -> Iterable[tuple[Atom, _F]]:
-        return self._map.items()
+        yield from sorted(self._map.items())
 
     def get(self, key: Atom, default: Optional[_F] = None) -> Optional[_F]:
         return self._map.get(key, default)
