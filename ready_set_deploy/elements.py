@@ -335,7 +335,7 @@ class Set(FullElement["SetDiff[_F]"], Generic[_F]):
         return self.__class__(items=set(self._items))
 
     def to_primitive(self) -> Primitive:
-        return ["set", *(item.to_primitive() for item in self._items)]
+        return ["set", *(item.to_primitive() for item in sorted(self._items))]
 
     @classmethod
     def _from_primitive(cls, primitive: Primitive) -> "Set[_F]":
@@ -441,8 +441,8 @@ class SetDiff(DiffElement["Set[_F]"], Generic[_F]):
     def to_primitive(self) -> Primitive:
         return {
             "diff_type": "set",
-            "to_add": [atom.to_primitive() for atom in self.to_add],
-            "to_remove": [atom.to_primitive() for atom in self.to_remove],
+            "to_add": [atom.to_primitive() for atom in sorted(self.to_add)],
+            "to_remove": [atom.to_primitive() for atom in sorted(self.to_remove)],
         }
 
     @classmethod
@@ -495,7 +495,7 @@ class Map(FullElement["MapDiff"], Generic[_F, _D]):
         return self.__class__(map={key: value.copy() for key, value in self._map.items()})
 
     def to_primitive(self) -> Primitive:
-        return {key.to_primitive(): value.to_primitive() for key, value in self._map.items()}
+        return {key.to_primitive(): value.to_primitive() for key, value in sorted(self._map.items())}
 
     @classmethod
     def _from_primitive(cls, primitive: Primitive) -> "Map":
@@ -627,9 +627,9 @@ class MapDiff(DiffElement[Map], Generic[_F, _D]):
     def to_primitive(self) -> Primitive:
         return {
             "diff_type": "map",
-            "keys_to_remove": list(sorted(cast(str, atom.to_primitive()) for atom in self.keys_to_remove)),
-            "items_to_set": list(sorted([key.to_primitive(), value.to_primitive()] for key, value in self.items_to_set)),
-            "items_to_add": list(sorted([key.to_primitive(), value.to_primitive()] for key, value in self.items_to_add)),
+            "keys_to_remove": list(sorted(cast(str, atom.to_primitive()) for atom in sorted(self.keys_to_remove))),
+            "items_to_set": list(sorted([key.to_primitive(), value.to_primitive()] for key, value in sorted(self.items_to_set))),
+            "items_to_add": list(sorted([key.to_primitive(), value.to_primitive()] for key, value in sorted(self.items_to_add))),
         }
 
     @classmethod
