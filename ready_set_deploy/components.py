@@ -7,7 +7,7 @@ from ready_set_deploy.elements import DiffElement, FullElement
 Elements = Union[DiffElement, FullElement]
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(order=True)
 class Component:
     name: str
     dependencies: list[tuple[str, tuple[str, ...]]] = dataclasses.field(default_factory=list)
@@ -19,7 +19,7 @@ class Component:
             "name": self.name,
             "dependencies": [[name, [segment for segment in qualifier]] for name, qualifier in self.dependencies],
             "qualifier": [*self.qualifier],
-            "elements": {name: element.to_primitive() for name, element in self.elements.items()},
+            "elements": {name: element.to_primitive() for name, element in sorted(self.elements.items())},
         }
 
     @classmethod
