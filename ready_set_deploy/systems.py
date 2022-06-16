@@ -11,7 +11,7 @@ class System:
 
     def to_primitive(self) -> dict:
         return {
-            "components": [component.to_primitive() for component in self.components],
+            "components": [component.to_primitive() for component in sorted(self.components)],
             "version": "2",
             "is_diff": self.is_diff(),
         }
@@ -43,7 +43,7 @@ class System:
             unblocked = [component for component in components.values() if all(dependency not in components for dependency in component.dependencies)]
             if not unblocked:
                 raise ValueError("Circular dependency in system - invalid state")
-            for component in unblocked:
+            for component in sorted(unblocked):
                 yield component
                 components.pop(component.dependency_key)
 
