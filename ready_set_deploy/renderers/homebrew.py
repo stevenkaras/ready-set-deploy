@@ -19,7 +19,7 @@ PackageOptionsMapDiff = MapDiff[Map[Atom, AtomDiff], MapDiff[Atom, AtomDiff]]
 
 
 class HomebrewRenderer(Renderer):
-    PROVIDER_NAME = "packages.homebrew"
+    NAME = "packages.homebrew"
 
     def to_commands(self, diff: Component) -> Iterable[Sequence[str]]:
         taps = cast(AtomSetDiff, diff.elements["taps"])

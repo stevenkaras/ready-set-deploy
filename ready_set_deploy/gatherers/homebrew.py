@@ -4,7 +4,7 @@ Holistic homebrew RSD provider
 This provider handles all aspects of the homebrew packaging system
 """
 from ready_set_deploy.components import Component
-from ready_set_deploy.elements import AtomDiff, Atom, FullElement, Set, Map, MapDiff
+from ready_set_deploy.elements import AtomDiff, Atom, Set, Map, MapDiff
 
 from ready_set_deploy.runner import Runner
 from ready_set_deploy.gatherers.base import Gatherer
@@ -49,13 +49,13 @@ class HomebrewGatherer(Gatherer):
         return Component(
             name=self.NAME,
             elements={
-                "taps": FullElement.infer(set(taps)),
-                "simple_formulas": FullElement.infer(set(formula["name"] for formula in simple_formulas)),
-                "formulas": FullElement.infer(
+                "taps": AtomSet.infer(set(taps)),
+                "simple_formulas": AtomSet.infer(set(formula["name"] for formula in simple_formulas)),
+                "formulas": PackageOptionsMap.infer(
                     {formula["name"]: {option: value for option, value in formula if option != "name"} for formula in complex_formulas}
                 ),
-                "simple_casks": FullElement.infer(set(cask["name"] for cask in simple_casks)),
-                "casks": FullElement.infer({cask["name"]: {option: value for option, value in cask if option != "name"} for cask in complex_casks}),
+                "simple_casks": AtomSet.infer(set(cask["name"] for cask in simple_casks)),
+                "casks": PackageOptionsMap.infer({cask["name"]: {option: value for option, value in cask if option != "name"} for cask in complex_casks}),
             },
         )
 

@@ -103,17 +103,22 @@ class FullElement(Element, Generic[_CD]):
             raise TypeError(f"Expected a primitive, got {type(primitive)}")
 
     @classmethod
-    def infer(cls, inferrable: Inferrable) -> "FullElement":
+    def infer(cls: type[_CF], inferrable: Inferrable) -> _CF:
         if isinstance(inferrable, str):
-            return Atom._infer(inferrable)
+            result: FullElement = Atom._infer(inferrable)
         elif isinstance(inferrable, list):
-            return List._infer(inferrable)
+            result = List._infer(inferrable)
         elif isinstance(inferrable, set):
-            return Set._infer(inferrable)
+            result = Set._infer(inferrable)
         elif isinstance(inferrable, dict):
-            return Map._infer(inferrable)
+            result = Map._infer(inferrable)
         else:
             raise TypeError(f"Expected an inferrable type, got {type(inferrable)}")
+
+        if not isinstance(result, cls):
+            raise TypeError(f"Expected to infer a {cls}, but got {type(result)}")
+
+        return result
 
 
 class DiffElement(Element, Generic[_CF]):
