@@ -112,9 +112,11 @@ The only method I'm aware of that provably produces diffs closer to the intent r
 ## Components
 
 A component represents a cohesive set of system configuration state. Components should be independent of each other.
-Components have one or more elements, a type, a qualifier.
-The type of component determines the type of elements it has, and which types of components it depends on.
-The qualifier is a list of path segments signifying the parent components it depends upon.
+Components have one or more elements, a type, a qualifier, and any number of dependencies.
+The type of component determines the type of elements it has.
+A component depends on the existence of a component with the type/qualifier specified by each of its dependencies.
+
+The qualifier is a list of path segments.
 
 Components define the diff/apply/combine operations, but merely delegate them to the underlying elements. As such, a diff Component is populated solely by diff-Elements.
 
