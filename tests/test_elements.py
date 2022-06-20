@@ -304,8 +304,8 @@ class TestMap(ElementTest):
 
 class TestList(ElementTest):
     def test_list(self):
-        listA = List([Atom(v) for v in "a b c d e f g h j k l m n o p".split()])
-        listB = List([Atom(v) for v in "a b d e f g h i j k l m q o p".split()])
+        listA = List([Atom(v) for v in "a b removed d e f g h j k l m achanged o p".split()])
+        listB = List([Atom(v) for v in "a b d e f g h inserted j k l m bchanged o p".split()])
 
         self._run_standard_tests("List", listA, listB)
 
@@ -315,7 +315,7 @@ class TestList(ElementTest):
 
         with self.subTest("List combine"):
             combined = listA.combine(listB)
-            expected = FullElement.infer(list("abcdefghijklmqnop"))
+            expected = FullElement.infer(list("a b removed d e f g h inserted j k l m bchanged achanged o p".split()))
             assert combined == expected
 
         with self.subTest("Map[Atom] ordering"):

@@ -688,7 +688,7 @@ class MapDiff(DiffElement[Map], Generic[_F, _D]):
         return str(self)
 
 
-class _DiffOpcode(Enum):
+class ListDiffOpcode(Enum):
     EQUAL = "="
     REPLACE = "~"
     INSERT = "+"
@@ -731,41 +731,40 @@ class List(FullElement["ListDiff"]):
         if not isinstance(other, type(self)):
             raise TypeError(f"{type(self)} are only diffable against other {type(self)}. Got {type(other)}")
         matcher = difflib.SequenceMatcher(a=self._atoms, b=other._atoms)
-        diff: list[tuple[str, int, str]] = []
+        diff: list[tuple[str, int, Optional[str], Optional[str]]] = []
         for group in matcher.get_grouped_opcodes(n=1):
             for opcode, self_start, self_end, other_start, other_end in group:
                 if opcode == "equal":
-                    for idx in range(other_start, other_end):
-                        diff.append((_DiffOpcode.EQUAL.value, idx, other._atoms[idx].value))
+                    for self_idx, other_idx in zip(range(self_start, self_end), range(other_start, other_end)):
+                        diff.append((ListDiffOpcode.EQUAL.value, other_idx, self._atoms[self_idx].value, other._atoms[other_idx].value))
                 elif opcode == "replace":
-                    for idx in range(other_start, other_end):
-                        diff.append((_DiffOpcode.REPLACE.value, idx, other._atoms[idx].value))
+                    for self_idx, other_idx in zip(range(self_start, self_end), range(other_start, other_end)):
+                        diff.append((ListDiffOpcode.REPLACE.value, other_idx, self._atoms[self_idx].value, other._atoms[other_idx].value))
                 elif opcode == "insert":
-                    for idx in range(other_start, other_end):
-                        diff.append((_DiffOpcode.INSERT.value, idx, other._atoms[idx].value))
+                    for other_idx in range(other_start, other_end):
+                        diff.append((ListDiffOpcode.INSERT.value, other_idx, None, other._atoms[other_idx].value))
                 elif opcode == "delete":
-                    for idx in range(self_start, self_end):
-                        diff.append((_DiffOpcode.DELETE.value, other_start, self._atoms[idx].value))
+                    for self_idx in range(self_start, self_end):
+                        diff.append((ListDiffOpcode.DELETE.value, other_start, self._atoms[self_idx].value, None))
                 else:
                     raise ValueError(f"Invalid opcode {opcode}")
 
         diff_type = cast(type[ListDiff], self.diff_type())
         return diff_type(diff=diff)
 
-    def _apply_opcodes(self, atoms: list[Atom], opcodes: list[tuple[str, int, str]]) -> list[Atom]:
+    def _apply_opcodes(self, atoms: list[Atom], opcodes: list[tuple[str, int, Optional[str], Optional[str]]]) -> list[Atom]:
         new_atoms = list(atoms)
-        for raw_opcode, idx, replacement in opcodes:
-            atom = Atom(replacement)
-            opcode = _DiffOpcode(raw_opcode)
-            if opcode == _DiffOpcode.EQUAL:
+        for raw_opcode, idx, raw_lhs, raw_rhs in opcodes:
+            opcode = ListDiffOpcode(raw_opcode)
+            if opcode == ListDiffOpcode.EQUAL:
                 actual = new_atoms[idx]
-                if atom is not None and actual != atom:
-                    raise ValueError(f"Diffs don't match at offset {idx}. Expected `{atom}` but got `{actual}`")
-            elif opcode == _DiffOpcode.REPLACE:
-                new_atoms[idx] = atom
-            elif opcode == _DiffOpcode.INSERT:
-                new_atoms.insert(idx, atom)
-            elif opcode == _DiffOpcode.DELETE:
+                if raw_lhs is not None and actual != Atom(raw_lhs):
+                    raise ValueError(f"Diffs don't match at offset {idx}. Expected `{raw_lhs}` but got `{actual}`")
+            elif opcode == ListDiffOpcode.REPLACE:
+                new_atoms[idx] = Atom(cast(str, raw_rhs))
+            elif opcode == ListDiffOpcode.INSERT:
+                new_atoms.insert(idx, Atom(cast(str, raw_rhs)))
+            elif opcode == ListDiffOpcode.DELETE:
                 del new_atoms[idx : idx + 1]
             else:
                 raise ValueError(f"Invalid opcode {opcode}")
@@ -854,17 +853,17 @@ class List(FullElement["ListDiff"]):
 
 
 class ListDiff(DiffElement[List]):
-    def __init__(self, diff: list[tuple[str, int, str]]) -> None:
+    def __init__(self, diff: list[tuple[str, int, Optional[str], Optional[str]]]) -> None:
         self.diff = diff
 
     def to_primitive(self) -> Primitive:
-        return [[op, idx, replacement] for op, idx, replacement in self.diff]
+        return [[op, idx, lhs, rhs] for op, idx, lhs, rhs in self.diff]
 
     @classmethod
     def _from_primitive(cls, primitive: Primitive) -> "DiffElement":
         primitive = cast(list[list], primitive)
 
-        diffs = [(op, idx, replacement) for op, idx, replacement in primitive]
+        diffs = [(op, idx, lhs, rhs) for op, idx, lhs, rhs in primitive]
         return cls(diff=diffs)
 
     @classmethod
