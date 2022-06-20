@@ -238,7 +238,7 @@ class Atom(FullElement["AtomDiff"]):
         return self.value
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}("{self.value}")'
+        return f"{self.__class__.__name__}({self.value!r})"
 
 
 @total_ordering
@@ -847,10 +847,10 @@ class List(FullElement["ListDiff"]):
         return self._atoms < __o._atoms
 
     def __str__(self) -> str:
-        return str(self._atoms)
+        return f"[{', '.join(str(atom) for atom in self._atoms)}]"
 
     def __repr__(self) -> str:
-        return str(self)
+        return f"{self.__class__.__name__}({self._atoms!r})"
 
 
 class ListDiff(DiffElement[List]):
