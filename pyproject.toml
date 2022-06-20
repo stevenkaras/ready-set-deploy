@@ -24,6 +24,7 @@ mypy = "^0.961"
 
 [tool.poetry.scripts]
 rsd = 'ready_set_deploy.cli:main'
+rsd-patch = 'ready_set_deploy.list_patch:main'
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
