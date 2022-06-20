@@ -20,7 +20,7 @@ class System:
     def from_primitive(cls, primitive: dict) -> "System":
         return cls(components=[Component.from_primitive(component, is_diff=primitive["is_diff"]) for component in primitive["components"]])
 
-    def components_by_dependency(self):
+    def components_by_dependency(self) -> dict[tuple[str, tuple[str, ...]], Component]:
         return {component.dependency_key: component for component in self.components}
 
     def is_diff(self) -> bool:
