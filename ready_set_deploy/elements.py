@@ -856,6 +856,9 @@ class ListDiff(DiffElement[List]):
     def __init__(self, diff: list[tuple[str, int, Optional[str], Optional[str]]]) -> None:
         self.diff = diff
 
+    def copy(self) -> "ListDiff":
+        return self.__class__(diff=list(self.diff))
+
     def to_primitive(self) -> Primitive:
         return [[op, idx, lhs, rhs] for op, idx, lhs, rhs in self.diff]
 
