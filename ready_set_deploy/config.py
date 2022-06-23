@@ -1,5 +1,6 @@
+import logging.config
 from itertools import chain
-from typing import Any
+from typing import Any, Iterator
 from collections.abc import Iterable
 import dataclasses
 import os
@@ -10,25 +11,82 @@ import tomli
 from ready_set_deploy.registry import GathererRegistry, RendererRegistry
 
 DEFAULT_CONFIG_PATHS: list[str] = [
-    "~/.config/rsd/config.toml",
+    "${XDG_CONFIG_HOME}/rsd/config.toml",
     "./rsd.toml",
 ]
-BUILTIN_CONFIG = {
-    "gather.packages.homebrew": "ready_set_deploy.gatherers.homebrew.HomebrewGatherer",
-    "render.packages.homebrew": "ready_set_deploy.renderers.homebrew.HomebrewRenderer",
+_DEFAULT_VARS = {
+    "${XDG_CONFIG_HOME}": "~/.config",
 }
+BUILTIN_CONFIG = """
+gather.packages.homebrew = "ready_set_deploy.gatherers.homebrew.HomebrewGatherer"
+render.packages.homebrew = "ready_set_deploy.renderers.homebrew.HomebrewRenderer"
+"""
+
+DEFAULT_LOGGING_CONFIG_PATH: str = "${XDG_CONFIG_HOME}/rsd/logging.toml"
+BUILTIN_LOGGING_CONFIG = """
+version = 1
+disable_existing_loggers = false
+
+[formatters.default]
+# python doesn't expose the msec as a strftime placeholder, but it's part of the record as a field
+# from: https://stackoverflow.com/questions/6290739/python-logging-use-milliseconds-in-time-format
+format = "%(asctime)s.%(msecs)03d:%(levelname)s:%(name)s::%(message)s"
+datefmt = "%Y-%m-%d %H:%M:%S"
+
+[handlers.console]
+class = "logging.StreamHandler"
+level = "INFO"
+formatter = "default"
+stream = "ext://sys.stdout"
+
+[loggers.root]
+level = "INFO"
+handlers = ["console"]
+"""
 
 
-def load_config(configpaths: list[str] = []) -> dict[str, str]:
-    def _load_configfile(path: pathlib.Path):
-        with open(path, mode="rb") as f:
-            return tomli.load(f)
+def _resolve_config_path(configpaths: list[str]) -> Iterator[pathlib.Path]:
+    for configpath in configpaths:
+        resolved_path = os.path.expandvars(configpath)
+        for var, value in _DEFAULT_VARS.items():
+            resolved_path = resolved_path.replace(var, value)
+        resolved_path = os.path.expanduser(resolved_path)
+        yield pathlib.Path(resolved_path)
 
-    default_paths = [path for path in [pathlib.Path(os.path.expandvars(path)).expanduser() for path in DEFAULT_CONFIG_PATHS] if path.exists()]
+
+def _ensure_configs():
+    # populate the default builtin configs
+    config_folder = next(_resolve_config_path(["${XDG_CONFIG_HOME}/rsd"]))
+    config_folder.mkdir(mode=0o755, parents=True, exist_ok=True)
+    logging_config_path = next(_resolve_config_path([DEFAULT_LOGGING_CONFIG_PATH]))
+    if not logging_config_path.exists():
+        with open(logging_config_path, mode="w") as f:
+            f.write(BUILTIN_LOGGING_CONFIG)
+
+    rsd_config = next(_resolve_config_path([DEFAULT_CONFIG_PATHS[0]]))
+    if not rsd_config.exists():
+        with open(rsd_config, mode="w") as f:
+            f.write(BUILTIN_CONFIG)
+
+
+def _load_configfile(path: pathlib.Path):
+    with open(path, mode="rb") as f:
+        return tomli.load(f)
+
+
+def setup_logging():
+    _ensure_configs()
+    logging_config_path = next(_resolve_config_path([DEFAULT_LOGGING_CONFIG_PATH]))
+    logging.config.dictConfig(_load_configfile(logging_config_path))
+
+
+def _load_config(configpaths: list[str] = []) -> dict[str, str]:
+    _ensure_configs()
+    default_paths = [path for path in _resolve_config_path(DEFAULT_CONFIG_PATHS) if path.exists()]
     user_paths = [pathlib.Path(os.path.expandvars(path)).expanduser() for path in configpaths]
 
     configs = [_load_configfile(path) for path in default_paths + user_paths]
-    configs.insert(0, BUILTIN_CONFIG)
+    configs.insert(0, tomli.loads(BUILTIN_CONFIG))
 
     return _merge_configs(*configs)
 
@@ -60,7 +118,7 @@ class Config:
 
     @classmethod
     def load_from_files(cls, configpaths: list[str] = []) -> "Config":
-        merged_config = load_config(configpaths)
+        merged_config = _load_config(configpaths)
         gather_config = {k.removeprefix("gather."): v for k, v in merged_config.items() if k.startswith("gather.")}
         render_config = {k.removeprefix("render."): v for k, v in merged_config.items() if k.startswith("render.")}
         return cls(

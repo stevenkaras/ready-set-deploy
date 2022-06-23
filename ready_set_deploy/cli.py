@@ -8,7 +8,7 @@ from collections.abc import Iterable
 import click
 from more_itertools import sliced
 
-from ready_set_deploy.config import Config
+from ready_set_deploy.config import Config, setup_logging
 from ready_set_deploy.systems import System
 
 
@@ -25,6 +25,7 @@ def _parse_qualifier(qualifier: Optional[str]) -> tuple[str, ...]:
 @click.group()
 @click.pass_context
 def main(ctx):
+    setup_logging()
     ctx.obj = Config.load_from_files()
 
 
