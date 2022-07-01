@@ -1,5 +1,4 @@
 import unittest
-from typing import cast
 
 from ready_set_deploy.elements import Atom, AtomDiff, DiffElement, FullElement, Set, SetDiff, Map, MapDiff, List
 
@@ -22,7 +21,7 @@ class ElementTest(unittest.TestCase):
     def _test_serialization_diff(self, elementA, elementB):
         diffed = elementA.diff(elementB)
         serialized = diffed.to_primitive()
-        roundtripped = cast(MapDiff, DiffElement.from_primitive(serialized))
+        roundtripped = DiffElement.from_primitive(serialized)
         assert diffed == roundtripped, f"Expected: {diffed!r} Actual: {roundtripped!r}"
 
     def _run_standard_tests(self, subtype, elementA, elementB):
