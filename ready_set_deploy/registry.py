@@ -67,5 +67,5 @@ class GathererRegistry(_Registry[Gatherer]):
 
 
 class RendererRegistry(_Registry[Renderer]):
-    def to_commands(self, name: str, diff: Component) -> Iterable[Sequence[str]]:
-        return self.get(name).to_commands(diff)
+    def to_commands(self, name: str, diff: Component, initial: Component) -> Iterable[Sequence[str]]:
+        return self.get(name).to_commands(diff, initial)

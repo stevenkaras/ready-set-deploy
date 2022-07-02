@@ -21,7 +21,7 @@ PackageOptionsMapDiff = MapDiff[Map[Atom, AtomDiff], MapDiff[Atom, AtomDiff]]
 class HomebrewRenderer(Renderer):
     NAME = "packages.homebrew"
 
-    def to_commands(self, diff: Component) -> Iterable[Sequence[str]]:
+    def to_commands(self, diff: Component, initial: Component) -> Iterable[Sequence[str]]:
         taps = cast(AtomSetDiff, diff.elements["taps"])
         yield from Runner.to_commands("brew tap".split(), sorted([a.value for a in taps.to_add]))
         yield from Runner.to_commands("brew untap".split(), sorted([a.value for a in taps.to_remove]))

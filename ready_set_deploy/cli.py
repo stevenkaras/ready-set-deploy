@@ -9,6 +9,7 @@ import click
 from more_itertools import sliced
 
 from ready_set_deploy.config import Config, setup_logging
+from ready_set_deploy.renderers.base import DummyComponent
 from ready_set_deploy.systems import System
 
 
@@ -93,16 +94,27 @@ def combine(state_files: Iterable[TextIO]):
 
 @main.command()
 @click.argument("diff_file", metavar="DIFF", type=click.File("r"))
+@click.option("--initial-file", type=click.File("r"), default=None)
 @click.pass_obj
-def commands(config: Config, diff_file: TextIO):
+def commands(config: Config, diff_file: TextIO, initial_file: Optional[TextIO]):
     """
-    Convert a PARTIAL state to commands to be run
+    Render a DIFF as commands to be run with optional context from INITIAL
     """
     diff_dict = json.load(diff_file)
     diff = System.from_primitive(diff_dict)
 
-    for component in diff:
-        for command in config.renderers.to_commands(component.name, component):
+    initial_components = {}
+    if initial_file is not None:
+        initial = System.from_primitive(json.load(initial_file))
+        initial_components = initial.components_by_dependency()
+
+    for key, component in diff.components_by_dependency().items():
+        if key in initial_components:
+            initial_component = initial_components[key]
+        else:
+            initial_component = DummyComponent.from_component(component)
+
+        for command in config.renderers.to_commands(component.name, component, initial_component):
             print(shlex.join(command))
 
 
@@ -161,14 +173,20 @@ def apply_local(config: Config, role_file: TextIO):
         local_components.extend(config.gatherers.gather_local(component.name, qualifier=component.qualifier))
 
     local_state = System(components=local_components)
+    local_components_by_key = local_state.components_by_dependency()
 
     if role.is_diff():
         applied = local_state.apply(role)
         diff = local_state.diff(applied)
     else:
         diff = local_state.diff(role)
-    for component in diff.components:
-        for command in config.renderers.to_commands(component.name, component):
+    for key, component in diff.components_by_dependency().items():
+        if key in local_components_by_key:
+            initial = local_components_by_key[key]
+        else:
+            initial = DummyComponent.from_component(component)
+
+        for command in config.renderers.to_commands(component.name, component, initial):
             print(shlex.join(command))
 
 
