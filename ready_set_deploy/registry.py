@@ -62,7 +62,7 @@ class GathererRegistry(_Registry[Gatherer]):
     def empty(self, name: str) -> Component:
         return self.get(name).empty()
 
-    def gather_local(self, name: str, *, qualifier: tuple[str, ...] = ()) -> Component:
+    def gather_local(self, name: str, *, qualifier: tuple[str, ...] = ()) -> Iterable[Component]:
         return self.get(name).gather_local(qualifier=qualifier)
 
 

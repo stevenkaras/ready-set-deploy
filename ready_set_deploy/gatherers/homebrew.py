@@ -3,6 +3,8 @@ Holistic homebrew RSD provider
 
 This provider handles all aspects of the homebrew packaging system
 """
+from collections.abc import Iterable
+
 from ready_set_deploy.components import Component
 from ready_set_deploy.elements import AtomDiff, Atom, Set, Map, MapDiff
 
@@ -29,7 +31,7 @@ class HomebrewGatherer(Gatherer):
             },
         )
 
-    def gather_local(self, *, qualifier: tuple[str, ...] = ()) -> Component:
+    def gather_local(self, *, qualifier: tuple[str, ...] = ()) -> Iterable[Component]:
         command = "brew tap".split()
         taps = Runner.lines(command)
 
@@ -46,7 +48,7 @@ class HomebrewGatherer(Gatherer):
         simple_casks = [cask for cask in casks if len(cask) == 1]
         complex_casks = [cask for cask in casks if len(cask) > 1]
 
-        return Component(
+        yield Component(
             name=self.NAME,
             elements={
                 "taps": AtomSet.infer(set(taps)),

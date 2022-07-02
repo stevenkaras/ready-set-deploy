@@ -1,4 +1,5 @@
 from pathlib import Path
+from collections.abc import Iterable
 
 from ready_set_deploy.components import Component
 from ready_set_deploy.elements import List
@@ -11,7 +12,7 @@ class Gatherer:
         """
         raise NotImplementedError("empty")
 
-    def gather_local(self, *, qualifier: tuple[str, ...] = ()) -> Component:
+    def gather_local(self, *, qualifier: tuple[str, ...] = ()) -> Iterable[Component]:
         raise NotImplementedError("gather_local")
 
     def gather_file(self, path: str) -> List:

@@ -38,7 +38,7 @@ def gather(config: Config, provider: str, qualifier: Optional[str] = None):
     Gather the local subsystem state for PROVIDER
     """
     component = config.gatherers.gather_local(provider, qualifier=_parse_qualifier(qualifier))
-    system = System(components=[component])
+    system = System(components=list(component))
     print(json.dumps(system.to_primitive(), sort_keys=True, indent=2))
 
 
@@ -158,7 +158,7 @@ def apply_local(config: Config, role_file: TextIO):
 
     local_components = []
     for component in role:
-        local_components.append(config.gatherers.gather_local(component.name, qualifier=component.qualifier))
+        local_components.extend(config.gatherers.gather_local(component.name, qualifier=component.qualifier))
 
     local_state = System(components=local_components)
 
