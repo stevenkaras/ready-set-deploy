@@ -8,6 +8,7 @@ from collections.abc import Iterable
 import click
 from more_itertools import sliced
 
+from ready_set_deploy.auto_dependencies import auto_mark_system_dependencies
 from ready_set_deploy.config import Config, setup_logging
 from ready_set_deploy.renderers.base import DummyComponent
 from ready_set_deploy.systems import System
@@ -40,6 +41,36 @@ def gather(config: Config, provider: str, qualifier: Optional[str] = None):
     """
     component = config.gatherers.gather_local(provider, qualifier=_parse_qualifier(qualifier))
     system = System(components=list(component))
+    print(json.dumps(system.to_primitive(), sort_keys=True, indent=2))
+
+
+@main.command()
+@click.argument("state_file", metavar="STATE", type=click.File("r"))
+def auto_mark_dependencies(state_file: TextIO):
+    """
+    Mark dependencies in STATE according to type/qualifier pairs from DEPENDENCIES
+    """
+    system = System.from_primitive(json.load(state_file))
+    auto_mark_system_dependencies(system)
+    print(json.dumps(system.to_primitive(), sort_keys=True, indent=2))
+
+
+@main.command()
+@click.argument("state_file", metavar="STATE", type=click.File("r"))
+@click.argument("dependency_file", metavar="DEPENDENCIES", type=click.File("r"), default=sys.stdin)
+def mark_dependencies(state_file: TextIO, dependency_file: TextIO):
+    """
+    Mark dependencies in STATE according to type/qualifier pairs from DEPENDENCIES
+    """
+    system = System.from_primitive(json.load(state_file))
+    components = system.components_by_dependency()
+    for line in dependency_file:
+        from_type, from_qualifier_spec, to_type, to_qualifier_spec = line.strip().split()
+        from_qualifier = _parse_qualifier(from_qualifier_spec)
+        to_qualifier = _parse_qualifier(to_qualifier_spec)
+        component = components[(from_type, from_qualifier)]
+        component.dependencies.append((to_type, to_qualifier))
+
     print(json.dumps(system.to_primitive(), sort_keys=True, indent=2))
 
 
