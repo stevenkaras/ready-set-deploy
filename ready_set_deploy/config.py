@@ -20,6 +20,8 @@ _DEFAULT_VARS = {
 BUILTIN_CONFIG = """
 gather.packages.homebrew = "ready_set_deploy.gatherers.homebrew.HomebrewGatherer"
 render.packages.homebrew = "ready_set_deploy.renderers.homebrew.HomebrewRenderer"
+gather.packages.asdf = "ready_set_deploy.gatherers.asdf.AsdfGatherer"
+render.packages.asdf = "ready_set_deploy.renderers.asdf.AsdfRenderer"
 """
 
 DEFAULT_LOGGING_CONFIG_PATH: str = "${XDG_CONFIG_HOME}/rsd/logging.toml"
